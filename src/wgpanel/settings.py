@@ -78,6 +78,17 @@ def derive_defaults(cfg: InterfaceConfig | None, config_dir: str) -> Settings:
     return settings
 
 
+def stored_str(stored: dict, key: str, fallback: str) -> str:
+    """A stored value wins even when it is empty.
+
+    ``stored.get(key) or fallback`` resurrects the default the moment a field is
+    cleared, so "delete the client DNS and save" silently came back as the
+    derived ``ORIG_PEERDNS``/interface address. Only a missing key falls back.
+    """
+    value = stored.get(key)
+    return fallback if value is None else str(value)
+
+
 def load_settings(state_dir: str, *, defaults: Settings | None = None) -> Settings:
     defaults = defaults or Settings()
     raw = files.read_bytes(os.path.join(state_dir, SETTINGS_NAME))
@@ -89,10 +100,10 @@ def load_settings(state_dir: str, *, defaults: Settings | None = None) -> Settin
             stored = {}
 
     merged = Settings(
-        server_url=str(stored.get("server_url") or defaults.server_url),
+        server_url=stored_str(stored, "server_url", defaults.server_url),
         server_port=to_int(stored.get("server_port")) or defaults.server_port,
-        client_dns=str(stored.get("client_dns") or defaults.client_dns),
-        client_allowed_ips=str(stored.get("client_allowed_ips") or defaults.client_allowed_ips),
+        client_dns=stored_str(stored, "client_dns", defaults.client_dns),
+        client_allowed_ips=stored_str(stored, "client_allowed_ips", defaults.client_allowed_ips),
         client_keepalive=to_int(stored.get("client_keepalive"))
         if to_int(stored.get("client_keepalive")) is not None
         else defaults.client_keepalive,
