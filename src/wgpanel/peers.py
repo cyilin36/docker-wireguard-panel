@@ -104,6 +104,19 @@ def allocate_address(cfg: InterfaceConfig, *, version: int = 4) -> str:
     raise WgPanelError(f"no free address left in {network}")
 
 
+def host_address(value: str) -> str | None:
+    """Normalise a peer's own tunnel address: ``10.13.13.5`` -> ``10.13.13.5/32``.
+
+    Only a single host is accepted. The peer's own address is what ends up in the
+    client's ``Address``, so a wider prefix belongs in the extra AllowedIPs list
+    instead — accepting one here would make the exported config invalid.
+    """
+    normalized = address_cidr(value)
+    if normalized is None:
+        return None
+    return normalized if normalized.rpartition("/")[2] in ("32", "128") else None
+
+
 class KeySource(Protocol):
     def genkey(self) -> str:
         ...
@@ -363,10 +376,31 @@ class PeerManager:
             allow_destructive=allow_destructive,
         )
 
+    def _own_address(self, cfg: InterfaceConfig, requested: str | None) -> str:
+        """The peer's own AllowedIPs entry.
+
+        An empty request keeps the historical behaviour (the next free host of the
+        tunnel subnet); anything else is taken literally so the caller can pin the
+        address it wants instead of inheriting the sequential one.
+        """
+        wanted = str(requested or "").strip()
+        if not wanted:
+            return f"{allocate_address(cfg)}/32"
+        chosen = host_address(wanted)
+        if chosen is None:
+            raise WgPanelError(
+                f"{wanted!r} is not a single host address (use 10.13.13.5 or 10.13.13.5/32; "
+                "a wider range belongs in the extra allowed networks)"
+            )
+        if chosen in used_addresses(cfg):
+            raise WgPanelError(f"{chosen} is already used by the interface or another peer")
+        return chosen
+
     def add(
         self,
         name: str,
         *,
+        address: str | None = None,
         keepalive: int | None = None,
         extra_allowed_ips: Iterable[str] = (),
         apply_now: bool = True,
@@ -381,13 +415,13 @@ class PeerManager:
         if candidate.lower() in existing:
             raise WgPanelError(f"a peer named {candidate!r} already exists")
 
-        address = allocate_address(cfg)
+        own = self._own_address(cfg, address)
         private = self.keys.genkey()
         public = self.keys.pubkey(private)
         preshared = self.keys.genpsk()
         self._store_keys(candidate, private, public, preshared)
 
-        allowed = [f"{address}/32"]
+        allowed = [own]
         for extra in extra_allowed_ips:
             normalized = normalize_cidr(str(extra))
             if not normalized:

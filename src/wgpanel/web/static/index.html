@@ -67,10 +67,13 @@
     <label>名称
       <input name="name" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}" placeholder="比如 laptop、phone" autocomplete="off">
     </label>
+    <label>隧道地址
+      <input name="address" placeholder="留空 = 自动分配；比如 10.13.13.50" autocomplete="off">
+    </label>
     <label>额外允许的网段
       <input name="extra_allowed_ips" placeholder="可留空，比如 192.168.1.0/24" autocomplete="off">
     </label>
-    <p class="hint">隧道地址、密钥、预共享密钥都会自动生成，创建后立即生效。</p>
+    <p class="hint">隧道地址留空才自动分配；密钥、预共享密钥自动生成，创建后立即生效。</p>
     <div class="dialog-actions">
       <button value="cancel" class="ghost">取消</button>
       <button value="ok" class="primary" id="btn-add-ok">创建并生效</button>

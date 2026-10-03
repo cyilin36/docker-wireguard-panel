@@ -214,6 +214,7 @@ def create_app(
         payload = await read_json(request)
         view, result = manager.add(
             str(payload.get("name", "")),
+            address=payload.get("address"),
             keepalive=payload.get("keepalive"),
             extra_allowed_ips=payload.get("extra_allowed_ips") or [],
             apply_now=True,

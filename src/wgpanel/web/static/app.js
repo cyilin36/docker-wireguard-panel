@@ -173,7 +173,11 @@ async function addPeer(form) {
   const out = await api('/api/peers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: data.get('name'), extra_allowed_ips: extra }),
+    body: JSON.stringify({
+      name: data.get('name'),
+      address: String(data.get('address') || '').trim(),
+      extra_allowed_ips: extra,
+    }),
   });
   toast(applyResultMessage(out.apply));
   await refresh();
