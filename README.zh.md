@@ -7,38 +7,86 @@
 
 ## 部署
 
+把 [docker-compose.example.yml](docker-compose.example.yml) 复制成 `docker-compose.yml`，
+改掉里面的 `PANEL_PASSWORD`，然后 `docker compose up -d`。文件内容如下：
+
 ```yaml
+name: wgpanel
+
 services:
   wireguard:
     image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: "1"
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Asia/Shanghai
+      SERVERURL: auto              # address your clients dial; set your public IP or domain
+      SERVERPORT: "51820"
+      PEERS: "1"                   # peers generated on first start; manage them in the panel
+      PEERDNS: auto
+      INTERNAL_SUBNET: 10.13.13.0
+      ALLOWEDIPS: 0.0.0.0/0, ::/0
+    volumes:
+      - ./config:/config
+      - /lib/modules:/lib/modules:ro
     ports:
-      - 51820:51820/udp
-      - 47710:47710        # 面板共用这个网络命名空间，它的端口必须写在这
-    # ...你原有的配置
+      - "51820:51820/udp"
+      # The panel shares this network namespace, so its UI port can only be
+      # published here (a network_mode: service:X container cannot use ports:).
+      - "47710:47710"
+    restart: unless-stopped
 
   wgpanel:
     build: .
     image: wgpanel:dev
-    network_mode: "service:wireguard"   # 共用命名空间，所以不需要 docker socket
-    cap_add: [NET_ADMIN, NET_RAW]
+    container_name: wgpanel
+    # Sharing the wireguard network namespace is what lets `wg syncconf`,
+    # `wg show` and tcpdump run locally, with no docker socket.
+    network_mode: "service:wireguard"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     volumes:
-      - ./config:/config                # 和 wireguard 容器挂同一个配置目录
+      # The same mount the wireguard container uses, so the panel edits the exact
+      # wg0.conf the interface is reading.
+      - ./config:/config
     environment:
+      TZ: Asia/Shanghai
+      WG_CONFIG_DIR: /config/wg_confs
+      WG_STATE_DIR: /config/.wgpanel
+      PANEL_PORT: "47710"
+      # Web UI login. Change it before exposing the port.
       PANEL_USER: admin
-      PANEL_PASSWORD: 自己设一个
-    command: ["serve"]
+      PANEL_PASSWORD: change-me
+    depends_on:
+      - wireguard
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      # wg syncconf needs a temp file; openresolv (used by wg-quick when the
+      # config has a DNS directive) needs somewhere for resolver state.
+      - /tmp
+      - /run
+    command: ["serve"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 ```
 
-```sh
-docker compose up -d
-```
-
-打开 `http://你的机器:47710`，用上面那组账号密码登录；进去点 **设置**，填客户端要连的服务器地址
-（公网 IP 或域名）——二维码和 `.conf` 都靠它生成。
-
-面板是明文 HTTP，挂到公网就把密码设强一点。仓库里的 [compose.yaml](compose.yaml) 就是同一套配置，
-可以直接跑，多了几项资源限制。
+打开 `http://你的机器:47710`，用 `PANEL_USER` / `PANEL_PASSWORD` 登录；进去点 **设置**，
+填客户端要连的服务器地址（公网 IP 或域名）——二维码和 `.conf` 都靠它生成。
+面板是明文 HTTP，挂到公网就把密码设强一点。
 
 ## 能做什么
 
@@ -64,5 +112,3 @@ docker compose exec wgpanel wgpanel show     # 当前 peer（私钥打码）
 `wg-quick strip` 剥掉 `wg(8)` 不认识的指令，`wg syncconf` 只下发有差异的部分——这就是已建立的会话
 不被打断的原因。`syncconf` 管不到的（地址、路由、DNS、钩子）单独补 `ip` 命令，或者回落到容器内
 `wg-quick down && up`。
-
-完整推导和判定表见 [docs/design.md](docs/design.md)。

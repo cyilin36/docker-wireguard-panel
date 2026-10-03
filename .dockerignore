@@ -8,5 +8,5 @@ __pycache__
 *.py[cod]
 tests
 data
-compose.yaml
+docker-compose.example.yml
 docs

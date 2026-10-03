@@ -32,10 +32,12 @@ dist/
 *.egg-info/
 .eggs/
 
-# Test suites are kept out of the repository (same convention as the other repos)
+# Test suites and design notes are kept out of the repository
+# (same convention as the other repos: they stay on disk, never published)
 test/
 tests/
 conftest.py
+docs/
 
 # Runtime output: local compose stacks, wireguard configs, panel state
 data/
