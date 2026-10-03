@@ -1,17 +1,110 @@
+/* wgpanel stylesheet.
+
+   Two layers, in this order:
+
+   1. tokens  — one block per theme. `:root` holds the day palette (the default),
+               `[data-theme="dark"]` the night one, and a prefers-color-scheme
+                fallback covers the no-JavaScript case so `auto` still follows the
+                system. Every colour used below comes from here, and
+                tests/test_theme.py checks the pairs that carry text for WCAG AA —
+                including the two palettes defining the same token names.
+   2. components — layout and looks; they only ever reference `var(--token)`.
+                Hardcoding a colour down here breaks one of the two themes, so
+                don't: tests/test_theme.py fails the build if you do.
+
+   `data-theme` is written on <html> by theme-init.js before the first paint. */
+
+/* --------------------------------------------------------------- tokens -- */
 :root {
+  /* light (default) */
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --panel: #ffffff;
+  --panel-2: #f6f8fa;
+  --line: #d8dee4;
+  --line-strong: #818b94;
+  --text: #1f2328;
+  --muted: #59636e;
+  --faint: #6e7781;
+  --accent: #1a7f37;          /* online / success */
+  --accent-2: #0969da;        /* primary action */
+  --on-accent: #ffffff;
+  --danger: #cf222e;
+  --danger-text: #a40e26;
+  --ok-tint: rgba(26, 127, 55, .08);
+  --ok-line: rgba(26, 127, 55, .35);
+  --warn-tint: rgba(154, 103, 0, .08);
+  --warn-line: rgba(154, 103, 0, .38);
+  --danger-tint: rgba(207, 34, 46, .07);
+  --danger-line: rgba(207, 34, 46, .38);
+  --row-hover: rgba(31, 35, 40, .03);
+  --overlay: rgba(31, 35, 40, .45);
+  --focus: rgba(9, 105, 218, .35);
+  --radius: 10px;
+  --radius-sm: 8px;
+  color-scheme: light;
+}
+
+/* Night palette, applied two ways so the same values serve both the explicit
+   choice and the `auto` + dark-system case. Keep the two in sync by hand: one
+   block is a selector, the other is a media query, and CSS cannot share them. */
+[data-theme="dark"] {
   --bg: #0b0f14;
+  --bg-soft: #0e141b;
   --panel: #131a22;
   --panel-2: #161f29;
   --line: #24313d;
+  --line-strong: #556a7d;
   --text: #e6edf3;
   --muted: #8b9bab;
+  --faint: #7d8b9a;
   --accent: #3fb950;
-  --accent-2: #2f81f7;
-  --warn: #d29922;
+  --accent-2: #1a6fd4;
+  --on-accent: #ffffff;
   --danger: #f85149;
-  --radius: 10px;
+  --danger-text: #ffb4ae;
+  --ok-tint: rgba(63, 185, 80, .08);
+  --ok-line: rgba(63, 185, 80, .40);
+  --warn-tint: rgba(210, 153, 34, .08);
+  --warn-line: rgba(210, 153, 34, .45);
+  --danger-tint: rgba(248, 81, 73, .08);
+  --danger-line: rgba(248, 81, 73, .45);
+  --row-hover: rgba(255, 255, 255, .03);
+  --overlay: rgba(0, 0, 0, .6);
+  --focus: rgba(88, 166, 255, .45);
+  color-scheme: dark;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0b0f14;
+    --bg-soft: #0e141b;
+    --panel: #131a22;
+    --panel-2: #161f29;
+    --line: #24313d;
+    --line-strong: #556a7d;
+    --text: #e6edf3;
+    --muted: #8b9bab;
+    --faint: #7d8b9a;
+    --accent: #3fb950;
+    --accent-2: #1a6fd4;
+    --on-accent: #ffffff;
+    --danger: #f85149;
+    --danger-text: #ffb4ae;
+    --ok-tint: rgba(63, 185, 80, .08);
+    --ok-line: rgba(63, 185, 80, .40);
+    --warn-tint: rgba(210, 153, 34, .08);
+    --warn-line: rgba(210, 153, 34, .45);
+    --danger-tint: rgba(248, 81, 73, .08);
+    --danger-line: rgba(248, 81, 73, .45);
+    --row-hover: rgba(255, 255, 255, .03);
+    --overlay: rgba(0, 0, 0, .6);
+    --focus: rgba(88, 166, 255, .45);
+    color-scheme: dark;
+  }
+}
+
+/* ------------------------------------------------------------ components -- */
 * { box-sizing: border-box; }
 
 body {
@@ -20,42 +113,78 @@ body {
   color: var(--text);
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Roboto, sans-serif;
   padding: 24px clamp(16px, 4vw, 48px) 64px;
+  -webkit-text-size-adjust: 100%;
 }
 
 header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
 }
-.brand { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
 .iface { color: var(--muted); font-size: 13px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
-.dot.up { background: var(--accent); box-shadow: 0 0 0 3px rgba(63,185,80,.15); }
-.dot.down { background: var(--danger); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.up { background: var(--accent); box-shadow: 0 0 0 3px var(--ok-tint); }
+.dot.down { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-tint); }
 
 .card {
   background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px;
 }
-.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 h2 { font-size: 14px; margin: 0; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 
-.actions { display: flex; gap: 8px; }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
 button, .ghost, .primary {
-  font: inherit; cursor: pointer; border-radius: 8px; padding: 7px 13px;
+  font: inherit; cursor: pointer; border-radius: var(--radius-sm); padding: 7px 13px;
   border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
   text-decoration: none; display: inline-block;
+  transition: border-color .12s ease, background-color .12s ease, color .12s ease;
 }
-button:hover, .ghost:hover { border-color: #35455a; }
-button.primary { background: var(--accent-2); border-color: var(--accent-2); color: #fff; font-weight: 600; }
-button.primary:hover { filter: brightness(1.1); }
+button:hover, .ghost:hover { border-color: var(--line-strong); background: var(--bg-soft); }
+button:active, .ghost:active { background: var(--line); }
+button.primary { background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); font-weight: 600; }
+button.primary:hover { filter: brightness(1.08); }
+button.primary:active { filter: brightness(.94); }
 button.danger { color: var(--danger); }
+button.danger:hover { border-color: var(--danger-line); background: var(--danger-tint); }
 button.tiny { padding: 4px 9px; font-size: 12px; }
+button[disabled] { opacity: .55; cursor: not-allowed; }
+button[disabled]:hover { border-color: var(--line); background: var(--panel-2); }
 .hidden { display: none !important; }
+
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+/* The pill clips a ring drawn outside it, so its segments get an inset one — and
+   because the pressed segment is filled with --accent-2, that ring has to be the
+   opposite colour or focus on the active theme would be invisible. */
+.theme-switch button:focus-visible {
+  outline: 2px solid var(--on-accent); outline-offset: -2px;
+  box-shadow: 0 0 0 2px var(--accent-2);
+}
+
+/* Three-state theme picker: auto / day / night. The active segment is marked by
+   aria-pressed (theme.js) and matched here, so there is one source of truth. */
+.theme-switch {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px;
+}
+.theme-switch button {
+  border: 1px solid transparent; background: transparent; color: var(--muted);
+  border-radius: 999px; padding: 4px 11px; font-size: 12px;
+}
+.theme-switch button:hover { color: var(--text); background: transparent; border-color: transparent; }
+.theme-switch button[aria-pressed="true"] {
+  background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); font-weight: 600;
+}
+.theme-switch button[aria-pressed="true"]:hover { background: var(--accent-2); color: var(--on-accent); }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+tbody tr { transition: background-color .12s ease; }
+tbody tr:hover { background: var(--row-hover); }
 tbody tr:last-child td { border-bottom: none; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.actions-cell { text-align: right; white-space: nowrap; }
@@ -63,49 +192,55 @@ td.actions-cell { text-align: right; white-space: nowrap; }
 .empty { color: var(--muted); margin: 6px 0 0; }
 .legend { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; line-height: 1.7; }
 .legend b { color: var(--text); font-weight: 600; }
-.kv dt small { display: block; color: #6b7c8c; font-size: 11px; }
+.kv dt small { display: block; color: var(--faint); font-size: 11px; }
 
 .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
-.badge.online { color: var(--accent); border-color: rgba(63,185,80,.4); background: rgba(63,185,80,.08); }
+.badge.online { color: var(--accent); border-color: var(--ok-line); background: var(--ok-tint); }
 .badge.offline { color: var(--muted); }
+/* Badge + handshake age travel together, so the narrow-screen layout can keep
+   them on one side of the row instead of spreading them to both edges. */
+.status { display: inline-flex; align-items: center; gap: 8px; }
 
 .banner {
   border-radius: var(--radius); padding: 11px 14px; margin-bottom: 18px;
   border: 1px solid var(--line); background: var(--panel-2); font-size: 13px;
 }
-.banner.warn { border-color: rgba(210,153,34,.45); background: rgba(210,153,34,.08); }
-.banner.error { border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.08); }
+.banner.warn { border-color: var(--warn-line); background: var(--warn-tint); }
+.banner.error { border-color: var(--danger-line); background: var(--danger-tint); }
 .banner .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .banner ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
 .kv dt { color: var(--muted); }
-.kv dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.kv dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
 
 dialog {
   border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
   color: var(--text); padding: 20px; width: min(460px, 92vw);
 }
-dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog::backdrop { background: var(--overlay); }
 dialog h3 { margin: 0 0 14px; font-size: 16px; }
 dialog label { display: block; margin-bottom: 11px; color: var(--muted); font-size: 13px; }
 dialog input {
   display: block; width: 100%; margin-top: 5px; padding: 8px 10px;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   color: var(--text); font: inherit;
 }
-dialog input:focus { outline: none; border-color: var(--accent-2); }
+dialog input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus); }
 .hint { color: var(--muted); font-size: 12px; margin: 4px 0 14px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
-.qr-wrap { background: #fff; border-radius: 10px; padding: 12px; display: flex; justify-content: center; }
+/* A QR code needs its white quiet zone in both themes: inverting it makes the
+   code unscannable on phones. --on-accent is white by definition in both. */
+.qr-wrap { background: var(--on-accent); border-radius: var(--radius); padding: 12px; display: flex; justify-content: center; }
 .qr-wrap img { width: 260px; height: 260px; image-rendering: pixelated; }
 
 .toast {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
-  padding: 10px 16px; border-radius: 8px; font-size: 13px;
+  padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px;
   background: var(--panel-2); border: 1px solid var(--line); max-width: 80vw;
+  box-shadow: 0 6px 24px var(--overlay);
 }
-.toast.error { border-color: rgba(248,81,73,.5); color: #ffb4ae; }
+.toast.error { border-color: var(--danger-line); color: var(--danger-text); background: var(--panel); }
 
 /* ------------------------------------------------------------------ login */
 body.login-body {
@@ -121,14 +256,56 @@ body.login-body {
 .login-card label { display: block; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
 .login-card input {
   display: block; width: 100%; margin-top: 5px; padding: 9px 11px;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   color: var(--text); font: inherit;
 }
-.login-card input:focus { outline: none; border-color: var(--accent-2); }
+.login-card input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus); }
 .login-card button { width: 100%; margin-top: 6px; }
-.login-card button[disabled] { opacity: .6; cursor: default; }
 .login-error {
-  color: #ffb4ae; background: rgba(248,81,73,.08);
-  border: 1px solid rgba(248,81,73,.45); border-radius: 8px;
+  color: var(--danger-text); background: var(--danger-tint);
+  border: 1px solid var(--danger-line); border-radius: var(--radius-sm);
   padding: 8px 11px; font-size: 13px; margin: 0 0 12px;
+}
+
+/* --------------------------------------------------------------- narrow UI --
+   Eight columns do not fit a phone. Below 760px each peer row becomes a small
+   card and every <td> prints its own label from data-label, which app.js renders
+   from the same names as the header. The thead is clipped rather than deleted so
+   it stays reachable, though display:block below already costs the table its
+   role in every engine that matters — the labels are what carry the meaning. */
+@media (max-width: 760px) {
+  body { padding: 16px 12px 48px; }
+  header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .brand { flex-wrap: wrap; }
+  .actions { justify-content: flex-end; }
+  .card { padding: 14px; }
+  table, tbody, tr, td { display: block; width: 100%; }
+  thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  tbody tr {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px 12px; margin-bottom: 10px;
+  }
+  tbody tr:last-child { margin-bottom: 0; }
+  tbody tr:hover { background: transparent; }
+  td {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    border-bottom: none; padding: 3px 0; text-align: left;
+  }
+  td::before {
+    content: attr(data-label); flex: none;
+    color: var(--muted); font-size: 12px; letter-spacing: .04em;
+  }
+  td:empty { display: none; }
+  td.num { text-align: right; }
+  .status { margin-left: auto; }
+  td.actions-cell { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  /* The delete/edit buttons carry the meaning; an "actions" label above them
+     would not. */
+  td.actions-cell::before { content: none; }}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
 }

@@ -77,17 +77,19 @@ function render() {
   dot.className = 'dot ' + (rt.exists && rt.up ? 'up' : 'down');
   dot.title = rt.exists ? (rt.up ? '隧道接口已启用' : '接口存在但未启用') : '接口不存在（wireguard 容器可能在重启）';
 
+  /* data-label mirrors the <th> text: below 760px CSS turns each row into a card
+     and prints the label, because the header row is no longer visible. */
   const rows = state.peers.map((peer) => `
     <tr>
-      <td>${escapeHtml(peer.name)}${peer.has_preshared_key ? '' : ' <span class="badge">无 PSK</span>'}</td>
-      <td class="mono">${escapeHtml(peer.client_ip || '—')}</td>
-      <td><span class="badge ${peer.online ? 'online' : 'offline'}"
+      <td data-label="名称">${escapeHtml(peer.name)}${peer.has_preshared_key ? '' : ' <span class="badge">无 PSK</span>'}</td>
+      <td class="mono" data-label="隧道地址">${escapeHtml(peer.client_ip || '—')}</td>
+      <td data-label="状态"><span class="status"><span class="badge ${peer.online ? 'online' : 'offline'}"
                 title="${peer.online ? '最近 3 分钟内有握手' : '最近 3 分钟没有握手'}">${peer.online ? '在线' : '离线'}</span>
-          <span class="mono" title="最后一次握手距今多久">${age(peer.latest_handshake)}</span></td>
-      <td class="mono">${escapeHtml(peer.endpoint || '—')}</td>
-      <td class="num">${rate(peer.rx_rate)}</td>
-      <td class="num">${rate(peer.tx_rate)}</td>
-      <td class="num mono">↓${bytes(peer.rx)} ↑${bytes(peer.tx)}</td>
+          <span class="mono" title="最后一次握手距今多久">${age(peer.latest_handshake)}</span></span></td>
+      <td class="mono" data-label="对端地址">${escapeHtml(peer.endpoint || '—')}</td>
+      <td class="num" data-label="下行">${rate(peer.rx_rate)}</td>
+      <td class="num" data-label="上行">${rate(peer.tx_rate)}</td>
+      <td class="num mono" data-label="累计流量">↓${bytes(peer.rx)} ↑${bytes(peer.tx)}</td>
       <td class="actions-cell">
         <button class="tiny" data-edit="${escapeHtml(peer.name)}">编辑</button>
         <button class="tiny" data-qr="${escapeHtml(peer.name)}" ${peer.has_keys ? '' : 'disabled title="没有存私钥，无法导出配置"'}>二维码</button>

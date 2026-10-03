@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>登录 · wgpanel</title>
+<!-- Palette before first paint: this must stay above the stylesheet. -->
+<script src="/static/theme-init.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="login-body">
@@ -63,5 +65,8 @@ form.addEventListener('submit', async (event) => {
   }
 });
 </script>
+<!-- No picker here, but the same module keeps the palette in step while the tab
+     sits open: the OS flipping at dusk, or the panel's choice changing. -->
+<script src="/static/theme.js"></script>
 </body>
 </html>

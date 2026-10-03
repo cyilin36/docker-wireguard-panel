@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>wgpanel</title>
+<!-- Palette before first paint: this must stay above the stylesheet. -->
+<script src="/static/theme-init.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -15,6 +17,11 @@
     <span class="iface" id="iface"></span>
   </div>
   <div class="actions">
+    <div class="theme-switch" id="theme-switch" role="group" aria-label="主题">
+      <button type="button" data-theme-choice="auto" aria-pressed="false" title="跟随系统设置">自动</button>
+      <button type="button" data-theme-choice="light" aria-pressed="true" title="日间模式">日间</button>
+      <button type="button" data-theme-choice="dark" aria-pressed="false" title="夜间模式">夜间</button>
+    </div>
     <button class="ghost" id="btn-settings">设置</button>
     <button class="ghost" id="btn-refresh">刷新</button>
     <button class="ghost" id="btn-logout">退出</button>
@@ -145,6 +152,7 @@
 </dialog>
 
 <div id="toast" class="toast hidden"></div>
+<script src="/static/theme.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
