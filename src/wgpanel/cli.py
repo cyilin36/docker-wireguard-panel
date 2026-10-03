@@ -24,6 +24,14 @@ EXIT_REFUSED = 2
 EXIT_ERROR = 3
 
 
+def _float_env(name: str, fallback: float) -> float:
+    """Read a float from the environment, falling back on anything unparsable."""
+    try:
+        return float(os.environ.get(name, fallback))
+    except ValueError:
+        return fallback
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wgpanel",
@@ -72,6 +80,13 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--config-dir", default=files.DEFAULT_CONFIG_DIR)
     serve.add_argument("--host", default=os.environ.get("PANEL_HOST", "0.0.0.0"))
     serve.add_argument("--port", type=int, default=int(os.environ.get("PANEL_PORT", "47710")))
+    serve.add_argument(
+        "--traffic-interval",
+        type=float,
+        default=_float_env("PANEL_TRAFFIC_INTERVAL", 1.0),
+        help="seconds between traffic counter samples; 0 disables sampling "
+             "(default: $PANEL_TRAFFIC_INTERVAL, or 1)",
+    )
     serve.add_argument(
         "--user",
         default=os.environ.get("PANEL_USER", "admin"),
@@ -221,16 +236,19 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     target = _target(args)
     auth = AuthConfig.from_environ(user=args.user)
+    interval = args.traffic_interval if args.traffic_interval > 0 else None
     app = create_app(
         interface=target.interface,
         conf_path=target.conf_path,
         state_dir=target.state_dir,
         auth=auth,
         config_dir=args.config_dir,
+        traffic_interval=interval,
     )
+    sampling = f"traffic sampling every {interval:g}s" if interval else "traffic sampling off"
     print(
         f"wgpanel listening on http://{args.host}:{args.port}  "
-        f"(interface {target.interface}, user {auth.user})"
+        f"(interface {target.interface}, user {auth.user}, {sampling})"
     )
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning", access_log=False)
     return EXIT_OK

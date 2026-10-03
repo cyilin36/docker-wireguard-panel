@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import os
 from collections.abc import Awaitable, Callable
@@ -29,8 +31,20 @@ from ..errors import RiskGateError, ValidationError, WgPanelError
 from ..peers import UNSET, KeySource, PeerManager
 from ..runner import LocalRunner, Runner
 from ..runtime import read_interface
+from ..traffic import TrafficStore
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+
+async def _sample_traffic(store: TrafficStore, interval: float) -> None:
+    """Background sampler: one counter read per interval, off the event loop.
+
+    The subprocess is blocking, so it runs in a thread; the store itself stays
+    single-threaded because only this loop ever mutates it.
+    """
+    while True:
+        await asyncio.to_thread(store.sample_once)
+        await asyncio.sleep(interval)
 
 
 class AuthMiddleware:
@@ -76,7 +90,15 @@ def create_app(
     config_dir: str = "",
     runner: Runner | None = None,
     keys: KeySource | None = None,
+    traffic: TrafficStore | None = None,
+    traffic_interval: float | None = None,
 ) -> Starlette:
+    """Build the panel.
+
+    ``traffic_interval`` is the sampler's period in seconds; ``None`` (the
+    default) leaves the sampler off, which is what the tests want and what
+    ``serve`` overrides with ``--traffic-interval``.
+    """
     runner = runner or LocalRunner()
     guard = AuthGuard.for_config(auth)
     target = Target(interface=interface, conf_path=conf_path, state_dir=state_dir)
@@ -86,6 +108,27 @@ def create_app(
         keys=keys,
         config_dir=config_dir or os.path.dirname(os.path.abspath(conf_path)),
     )
+    if traffic is None:
+        store = TrafficStore(state_dir, interface=interface, runner=runner)
+        store.load()
+    else:
+        # An injected store is the caller's responsibility and is already loaded;
+        # load() would rebuild the in-flight minute/hour slices from disk.
+        store = traffic
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette):
+        task = None
+        if traffic_interval and traffic_interval > 0:
+            task = asyncio.create_task(_sample_traffic(store, traffic_interval))
+        try:
+            yield
+        finally:
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+            await asyncio.to_thread(store.flush)
 
     def api(handler: Callable[[object], Awaitable[Response]]) -> Callable[[object], Awaitable[Response]]:
         async def wrapper(request):
@@ -146,6 +189,7 @@ def create_app(
             "peers": [peer.to_dict() for peer in manager.views(runtime)],
             "settings": settings.to_dict(),
             "settings_ready": settings.client_ready,
+            "traffic": store.snapshot(),
             "pending": None,
             "error": None,
         }
@@ -195,6 +239,16 @@ def create_app(
             allow_destructive=bool(payload.get("allow_destructive")),
         )
         return JSONResponse(result.to_dict(), status_code=200 if result.ok else 500)
+
+    @api
+    async def get_traffic(request) -> Response:
+        raw = request.query_params.get("window", "3600")
+        try:
+            window = int(raw)
+        except ValueError:
+            raise WgPanelError(f"invalid traffic window {raw!r}") from None
+        scope = request.query_params.get("scope") or "all"
+        return JSONResponse(store.series(scope=scope, window=window))
 
     @api
     async def get_settings(request) -> Response:
@@ -320,6 +374,7 @@ def create_app(
         Route("/api/state", get_state),
         Route("/api/plan", get_plan),
         Route("/api/apply", post_apply, methods=["POST"]),
+        Route("/api/traffic", get_traffic),
         Route("/api/settings", get_settings),
         Route("/api/settings", put_settings, methods=["PUT"]),
         Route("/api/peers", list_peers),
@@ -330,4 +385,8 @@ def create_app(
         Route("/api/peers/{name}/qr.svg", peer_qr_svg),
         Route("/api/peers/{name}/qr.png", peer_qr_png),
     ]
-    return Starlette(routes=routes, middleware=[Middleware(AuthMiddleware, guard=guard)])
+    return Starlette(
+        routes=routes,
+        middleware=[Middleware(AuthMiddleware, guard=guard)],
+        lifespan=lifespan,
+    )
