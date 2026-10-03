@@ -153,7 +153,7 @@ function renderBanner() {
    "sampled, idle". Down = server → client (wg tx), up = client → server (rx). */
 const TRAFFIC_RANGES = [60, 3600, 43200, 86400, 604800, 1296000];
 const TRAFFIC_KEY = 'wgpanel.traffic';
-const traffic = { scope: 'all', window: 3600, points: [], step: 60, error: null, geometry: null };
+const traffic = { scope: 'all', window: 3600, points: [], error: null, geometry: null };
 let trafficTimer = null;
 let trafficScopeSignature = '';
 let trafficResize = null;
@@ -381,7 +381,6 @@ async function refreshTraffic() {
     const query = `window=${traffic.window}&scope=${encodeURIComponent(traffic.scope)}`;
     const data = await api('/api/traffic?' + query);
     traffic.points = data.points || [];
-    traffic.step = data.step || 1;
     traffic.error = null;
   } catch (err) {
     if (redirecting) return;

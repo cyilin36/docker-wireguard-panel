@@ -363,6 +363,9 @@ class TrafficStore:
         self._append_row(MINUTE_NAME, bucket)
         self._hour_rows.append(bucket)
         self._minute_cache = None
+        # Once a minute is also the right cadence for the lifetime totals: a
+        # panel killed without a clean shutdown then loses at most a minute.
+        self._save_totals()
 
     def _close_hour(self) -> None:
         low, high = self._hour_ts, self._hour_ts + 3600
