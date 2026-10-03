@@ -106,3 +106,29 @@ dialog input:focus { outline: none; border-color: var(--accent-2); }
   background: var(--panel-2); border: 1px solid var(--line); max-width: 80vw;
 }
 .toast.error { border-color: rgba(248,81,73,.5); color: #ffb4ae; }
+
+/* ------------------------------------------------------------------ login */
+body.login-body {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px; margin: 0;
+}
+.login-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px 24px; width: min(360px, 100%);
+}
+.login-card h1 { font-size: 20px; margin: 0 0 4px; }
+.login-sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+.login-card label { display: block; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
+.login-card input {
+  display: block; width: 100%; margin-top: 5px; padding: 9px 11px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--text); font: inherit;
+}
+.login-card input:focus { outline: none; border-color: var(--accent-2); }
+.login-card button { width: 100%; margin-top: 6px; }
+.login-card button[disabled] { opacity: .6; cursor: default; }
+.login-error {
+  color: #ffb4ae; background: rgba(248,81,73,.08);
+  border: 1px solid rgba(248,81,73,.45); border-radius: 8px;
+  padding: 8px 11px; font-size: 13px; margin: 0 0 12px;
+}

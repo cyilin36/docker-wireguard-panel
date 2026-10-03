@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · wgpanel</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-body">
+
+<form id="login-form" class="login-card" autocomplete="on">
+  <h1>wgpanel</h1>
+  <p class="login-sub">请输入账号和密码</p>
+
+  <label>账号
+    <input name="user" autocomplete="username" autofocus required>
+  </label>
+  <label>密码
+    <input name="password" type="password" autocomplete="current-password" required>
+  </label>
+
+  <p class="login-error hidden" id="login-error"></p>
+  <button class="primary" type="submit" id="login-submit">登录</button>
+</form>
+
+<script>
+'use strict';
+
+const form = document.getElementById('login-form');
+const errorBox = document.getElementById('login-error');
+const submit = document.getElementById('login-submit');
+
+/* Only ever bounce back to a path on this panel: "//evil.example" and
+   "http://evil.example" are both off limits. */
+function safeNext() {
+  const raw = new URLSearchParams(location.search).get('next') || '/';
+  return /^\/(?![\/\\])/.test(raw) ? raw : '/';
+}
+
+function fail(message) {
+  errorBox.textContent = message;
+  errorBox.classList.remove('hidden');
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  submit.disabled = true;
+  errorBox.classList.add('hidden');
+  const data = new FormData(form);
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: data.get('user'), password: data.get('password') }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) { location.href = safeNext(); return; }
+    fail(body.error || '登录失败');
+  } catch (err) {
+    fail('连不上面板：' + err.message);
+  } finally {
+    submit.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

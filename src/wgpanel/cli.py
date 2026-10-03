@@ -72,6 +72,12 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--config-dir", default=files.DEFAULT_CONFIG_DIR)
     serve.add_argument("--host", default=os.environ.get("PANEL_HOST", "0.0.0.0"))
     serve.add_argument("--port", type=int, default=int(os.environ.get("PANEL_PORT", "47710")))
+    serve.add_argument(
+        "--user",
+        default=os.environ.get("PANEL_USER", "admin"),
+        help="login account (default: $PANEL_USER, or admin); the password is only ever "
+             "read from $PANEL_PASSWORD, never from argv where `ps` could see it",
+    )
 
     return parser
 
@@ -210,16 +216,22 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
 def _cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
+    from .auth import AuthConfig
     from .web.app import create_app
 
     target = _target(args)
+    auth = AuthConfig.from_environ(user=args.user)
     app = create_app(
         interface=target.interface,
         conf_path=target.conf_path,
         state_dir=target.state_dir,
+        auth=auth,
         config_dir=args.config_dir,
     )
-    print(f"wgpanel listening on http://{args.host}:{args.port}  (interface {target.interface})")
+    print(
+        f"wgpanel listening on http://{args.host}:{args.port}  "
+        f"(interface {target.interface}, user {auth.user})"
+    )
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning", access_log=False)
     return EXIT_OK
 

@@ -48,6 +48,9 @@ services:
       WG_CONFIG_DIR: /config/wg_confs
       WG_STATE_DIR: /config/.wgpanel
       PANEL_PORT: "47710"
+      # Login for the web UI. Change the password before exposing the port.
+      PANEL_USER: admin
+      PANEL_PASSWORD: change-me
     depends_on:
       - wireguard
     restart: unless-stopped

@@ -3,6 +3,16 @@
 const $ = (sel) => document.querySelector(sel);
 let state = null;
 let busy = false;
+let redirecting = false;
+let refreshTimer = null;
+
+/* The session expired (or was never there): stop polling and go log in once. */
+function toLogin() {
+  if (redirecting) return;
+  redirecting = true;
+  clearInterval(refreshTimer);
+  location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+}
 
 /* ------------------------------------------------------------------ utils */
 async function api(path, options) {
@@ -10,6 +20,12 @@ async function api(path, options) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = { error: text }; }
+  if (res.status === 401) {
+    toLogin();
+    const err = new Error('未登录');
+    err.payload = data;
+    throw err;
+  }
   if (!res.ok) {
     const err = new Error((data && data.error) || res.statusText);
     err.payload = data;
@@ -131,7 +147,7 @@ async function refresh() {
     state = await api('/api/state');
     render();
   } catch (err) {
-    toast('刷新失败：' + err.message, true);
+    if (!redirecting) toast('刷新失败：' + err.message, true);
   }
 }
 
@@ -264,6 +280,12 @@ $('#btn-refresh').onclick = refresh;
 $('#btn-settings').onclick = openSettings;
 $('#btn-add').onclick = () => { $('#form-add').reset(); $('#dlg-add').showModal(); };
 $('#btn-apply').onclick = () => guard(applyPending);
+$('#btn-logout').onclick = async () => {
+  redirecting = true;
+  clearInterval(refreshTimer);
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (_) { /* leave anyway */ }
+  location.href = '/login';
+};
 
 $('#form-add').addEventListener('submit', (ev) => {
   if (ev.submitter && ev.submitter.value === 'cancel') return;
@@ -300,4 +322,4 @@ $('#peers-body').addEventListener('click', (ev) => {
 });
 
 refresh();
-setInterval(refresh, 2000);
+refreshTimer = setInterval(refresh, 2000);

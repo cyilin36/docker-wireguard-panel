@@ -38,3 +38,8 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "PIE", "RUF"]
 ignore = ["UP031"]  # percent formatting is fine in test fixtures
+
+[tool.ruff.lint.per-file-ignores]
+# The web layer answers the browser in Chinese, so its error strings use
+# full-width punctuation on purpose.
+"src/wgpanel/web/app.py" = ["RUF001"]
