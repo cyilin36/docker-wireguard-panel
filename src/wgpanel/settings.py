@@ -1,9 +1,10 @@
 """Panel settings that are not part of the tunnel configuration itself.
 
-The client config we hand out needs a server address, a DNS server and an
-AllowedIPs list; none of those live in the server's ``wg0.conf``. They are stored
-next to the panel state and defaulted from the LinuxServer ``.donoteditthisfile``
-marker when it exists.
+The client config we hand out needs a server address and an AllowedIPs list; none
+of that lives in the server's ``wg0.conf``. They are stored next to the panel
+state and defaulted from the LinuxServer ``.donoteditthisfile`` marker when it
+exists. The client DNS is the exception: it starts empty and stays empty until an
+admin asks for one (see :func:`derive_defaults`).
 """
 
 from __future__ import annotations
@@ -56,23 +57,25 @@ def read_marker(config_dir: str) -> dict[str, str]:
 
 
 def derive_defaults(cfg: InterfaceConfig | None, config_dir: str) -> Settings:
+    """Defaults for a panel that has never saved its own settings.
+
+    ``client_dns`` is deliberately **not** derived from anywhere: neither from the
+    interface address nor from the LinuxServer ``ORIG_PEERDNS`` marker. A guessed
+    resolver is worse than none — with the usual ``AllowedIPs = 0.0.0.0/0`` a
+    wrong address sends every query into a tunnel where nothing answers, and the
+    client loses name resolution entirely. Empty means "leave the client's own DNS
+    alone", and the admin can still set one in the panel.
+    """
     settings = Settings()
     marker = read_marker(config_dir)
 
     if cfg is not None:
         settings.server_port = to_int(cfg.listen_port) or 51820
-        for address in cfg.address:
-            if ":" in address:
-                continue
-            settings.client_dns = address.split("/")[0]
-            break
 
     if marker.get("SERVERURL"):
         settings.server_url = marker["SERVERURL"]
     if to_int(marker.get("SERVERPORT")):
         settings.server_port = to_int(marker["SERVERPORT"]) or settings.server_port
-    if marker.get("PEERDNS"):
-        settings.client_dns = marker["PEERDNS"]
     if marker.get("ALLOWEDIPS"):
         settings.client_allowed_ips = marker["ALLOWEDIPS"]
     return settings
