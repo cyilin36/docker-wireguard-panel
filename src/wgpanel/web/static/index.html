@@ -75,7 +75,7 @@
     </label>
     <p class="hint">隧道地址留空才自动分配；密钥、预共享密钥自动生成，创建后立即生效。</p>
     <div class="dialog-actions">
-      <button value="cancel" class="ghost">取消</button>
+      <button value="cancel" class="ghost" formnovalidate>取消</button>
       <button value="ok" class="primary" id="btn-add-ok">创建并生效</button>
     </div>
   </form>
@@ -100,7 +100,7 @@
     </label>
     <p class="hint">保存后立即生效，不会重启容器。</p>
     <div class="dialog-actions">
-      <button value="cancel" class="ghost">取消</button>
+      <button value="cancel" class="ghost" formnovalidate>取消</button>
       <button value="ok" class="primary">保存并生效</button>
     </div>
   </form>
@@ -127,7 +127,7 @@
       <input name="client_keepalive" type="number" min="0" max="65535" placeholder="25">
     </label>
     <div class="dialog-actions">
-      <button value="cancel" class="ghost">取消</button>
+      <button value="cancel" class="ghost" formnovalidate>取消</button>
       <button value="ok" class="primary" id="btn-settings-ok">保存</button>
     </div>
   </form>
