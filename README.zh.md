@@ -105,10 +105,3 @@ docker compose exec wgpanel wgpanel show     # 当前 peer（私钥打码）
 ```
 
 同一时间只让一个程序写 `wg0.conf`。
-
-## 原理
-
-`wg-quick` 只在拉起接口那一刻读一次配置，没有任何东西盯着那个文件。所以 wgpanel 直接把改动推进内核：
-`wg-quick strip` 剥掉 `wg(8)` 不认识的指令，`wg syncconf` 只下发有差异的部分——这就是已建立的会话
-不被打断的原因。`syncconf` 管不到的（地址、路由、DNS、钩子）单独补 `ip` 命令，或者回落到容器内
-`wg-quick down && up`。

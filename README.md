@@ -108,11 +108,3 @@ docker compose exec wgpanel wgpanel show     # current peers (keys redacted)
 ```
 
 Only one program may write `wg0.conf` at a time.
-
-## How it works
-
-`wg-quick` reads the config only when it brings the interface up; nothing watches the file. So wgpanel
-pushes the change into the kernel itself: `wg-quick strip` removes the directives `wg(8)` does not
-understand, and `wg syncconf` applies only the difference — which is why established sessions survive.
-What `syncconf` cannot touch (addresses, routes, DNS, hooks) gets its own `ip` commands, or falls back
-to an in-container `wg-quick down && up`.
