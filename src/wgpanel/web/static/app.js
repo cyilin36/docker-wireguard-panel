@@ -56,15 +56,18 @@ function render() {
   const rt = state.runtime;
 
   $('#iface').textContent = `${state.interface} · ${rt.listen_port || '—'} · ${(rt.addresses || []).join(', ') || '无地址'}`;
+  $('#iface').title = '接口名 · 监听端口 · 隧道地址';
   const dot = $('#status-dot');
   dot.className = 'dot ' + (rt.exists && rt.up ? 'up' : 'down');
+  dot.title = rt.exists ? (rt.up ? '隧道接口已启用' : '接口存在但未启用') : '接口不存在（wireguard 容器可能在重启）';
 
   const rows = state.peers.map((peer) => `
     <tr>
       <td>${escapeHtml(peer.name)}${peer.has_preshared_key ? '' : ' <span class="badge">无 PSK</span>'}</td>
       <td class="mono">${escapeHtml(peer.client_ip || '—')}</td>
-      <td><span class="badge ${peer.online ? 'online' : 'offline'}">${peer.online ? '在线' : '离线'}</span>
-          <span class="mono">${age(peer.latest_handshake)}</span></td>
+      <td><span class="badge ${peer.online ? 'online' : 'offline'}"
+                title="${peer.online ? '最近 3 分钟内有握手' : '最近 3 分钟没有握手'}">${peer.online ? '在线' : '离线'}</span>
+          <span class="mono" title="最后一次握手距今多久">${age(peer.latest_handshake)}</span></td>
       <td class="mono">${escapeHtml(peer.endpoint || '—')}</td>
       <td class="num">${rate(peer.rx_rate)}</td>
       <td class="num">${rate(peer.tx_rate)}</td>
@@ -80,11 +83,11 @@ function render() {
   $('#peers-empty').classList.toggle('hidden', state.peers.length > 0);
 
   $('#runtime').innerHTML = `
-    <dt>接口</dt><dd>${escapeHtml(rt.name)} ${rt.exists ? '' : '(不存在)'}</dd>
-    <dt>监听端口</dt><dd>${rt.listen_port || '—'}</dd>
-    <dt>地址</dt><dd>${(rt.addresses || []).join(', ') || '—'}</dd>
-    <dt>MTU</dt><dd>${rt.mtu == null ? '—' : rt.mtu}</dd>
-    <dt>服务端公钥</dt><dd>${escapeHtml(rt.public_key || '—')}</dd>
+    <dt>接口名</dt><dd>${escapeHtml(rt.name)} ${rt.exists ? '' : '（不存在）'}</dd>
+    <dt>监听端口<small>ListenPort</small></dt><dd>${rt.listen_port || '—'}</dd>
+    <dt>隧道地址<small>Address</small></dt><dd>${(rt.addresses || []).join(', ') || '—'}</dd>
+    <dt>MTU<small>隧道内单个包的上限</small></dt><dd>${rt.mtu == null ? '—' : rt.mtu}</dd>
+    <dt>服务器公钥<small>客户端配置里的 PublicKey</small></dt><dd>${escapeHtml(rt.public_key || '—')}</dd>
     <dt>配置文件</dt><dd>${escapeHtml(state.conf_path)}</dd>`;
 
   renderBanner();
