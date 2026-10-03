@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wgpanel</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="dot" id="status-dot"></span>
+    <h1>wgpanel</h1>
+    <span class="iface" id="iface"></span>
+  </div>
+  <div class="actions">
+    <button class="ghost" id="btn-settings">设置</button>
+    <button class="ghost" id="btn-refresh">刷新</button>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Peer</h2>
+    <div class="actions">
+      <button id="btn-apply" class="ghost hidden">应用改动</button>
+      <button id="btn-add" class="primary">添加 Peer</button>
+    </div>
+  </div>
+  <table id="peers">
+    <thead>
+      <tr>
+        <th>名称</th><th>地址</th><th>状态</th><th>端点</th>
+        <th class="num">下行</th><th class="num">上行</th>
+        <th class="num">累计</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="peers-body"></tbody>
+  </table>
+  <p class="empty" id="peers-empty">还没有 peer。</p>
+</section>
+
+<section class="card" id="runtime-card">
+  <div class="card-head"><h2>接口</h2></div>
+  <dl class="kv" id="runtime"></dl>
+</section>
+
+<!-- 添加 peer -->
+<dialog id="dlg-add">
+  <form method="dialog" id="form-add">
+    <h3>添加 Peer</h3>
+    <label>名称<input name="name" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}" placeholder="laptop" autocomplete="off"></label>
+    <label>额外 AllowedIPs<input name="extra_allowed_ips" placeholder="10.0.8.0/24（可留空，逗号分隔）" autocomplete="off"></label>
+    <p class="hint">隧道地址自动分配，密钥和预共享密钥自动生成。</p>
+    <div class="dialog-actions">
+      <button value="cancel" class="ghost">取消</button>
+      <button value="ok" class="primary" id="btn-add-ok">创建并生效</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 编辑 peer -->
+<dialog id="dlg-edit">
+  <form method="dialog" id="form-edit">
+    <h3>编辑 Peer</h3>
+    <input type="hidden" name="original">
+    <label>名称<input name="new_name" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}" autocomplete="off"></label>
+    <label>AllowedIPs<input name="allowed_ips" placeholder="10.0.8.2/32, 192.168.50.0/24" autocomplete="off"></label>
+    <label>PersistentKeepalive<input name="keepalive" type="number" min="0" max="65535" placeholder="留空 = 不设置"></label>
+    <label>Endpoint<input name="endpoint" placeholder="留空 = 由对端发起" autocomplete="off"></label>
+    <p class="hint">保存后立即生效，不会重启容器。</p>
+    <div class="dialog-actions">
+      <button value="cancel" class="ghost">取消</button>
+      <button value="ok" class="primary">保存并生效</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 设置 -->
+<dialog id="dlg-settings">
+  <form method="dialog" id="form-settings">
+    <h3>客户端配置设置</h3>
+    <p class="hint">这些是发给客户端的 conf / 二维码里要填的内容，不写进服务端 wg0.conf。</p>
+    <label>服务器地址<input name="server_url" placeholder="vpn.example.com 或公网 IP" autocomplete="off"></label>
+    <label>服务器端口<input name="server_port" type="number" min="1" max="65535"></label>
+    <label>客户端 DNS<input name="client_dns" placeholder="10.0.8.1" autocomplete="off"></label>
+    <label>客户端 AllowedIPs<input name="client_allowed_ips" placeholder="0.0.0.0/0, ::/0" autocomplete="off"></label>
+    <label>PersistentKeepalive<input name="client_keepalive" type="number" min="0" max="65535"></label>
+    <div class="dialog-actions">
+      <button value="cancel" class="ghost">取消</button>
+      <button value="ok" class="primary" id="btn-settings-ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 二维码 -->
+<dialog id="dlg-qr">
+  <h3 id="qr-title">客户端配置</h3>
+  <div class="qr-wrap"><img id="qr-img" alt="二维码"></div>
+  <div class="dialog-actions">
+    <a id="qr-download" class="ghost" download>下载 .conf</a>
+    <button class="primary" onclick="document.getElementById('dlg-qr').close()">关闭</button>
+  </div>
+</dialog>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
