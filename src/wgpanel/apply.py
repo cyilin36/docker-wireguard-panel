@@ -86,12 +86,13 @@ def verify_against(desired: InterfaceConfig, runtime: InterfaceRuntime) -> list[
             peer.allowed_ip_set() == live.allowed_ip_set(),
         )
         if peer.endpoint is not None:
-            add(
-                f"peer:{peer.key_id}:endpoint",
-                normalize_endpoint(peer.endpoint),
-                normalize_endpoint(live.endpoint),
-                normalize_endpoint(peer.endpoint) == normalize_endpoint(live.endpoint),
-            )
+            expected = normalize_endpoint(peer.endpoint)
+            actual = normalize_endpoint(live.endpoint)
+            # The live endpoint is learned state: the kernel overwrites it with
+            # the source address of each authenticated packet, so a roaming or
+            # NAT'd peer legitimately reads back a value other than the seed we
+            # just wrote. Only having no endpoint at all means the seed missed.
+            add(f"peer:{peer.key_id}:endpoint", expected, actual, actual is not None)
         keepalive = to_int(peer.persistent_keepalive)
         if keepalive is not None:
             add(

@@ -215,7 +215,9 @@ function openEdit(name) {
   form.new_name.value = peer.name;
   form.allowed_ips.value = (peer.allowed_ips || []).join(', ');
   form.keepalive.value = peer.persistent_keepalive == null ? '' : peer.persistent_keepalive;
-  form.endpoint.value = peer.endpoint || '';
+  // The address the peer dialled in from is learned state; editing it back into
+  // the file would pin a stale NAT port, so only the configured value belongs here.
+  form.endpoint.value = peer.config_endpoint || '';
   $('#dlg-edit').showModal();
 }
 

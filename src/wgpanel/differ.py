@@ -82,12 +82,21 @@ def _file_level_changes(previous: InterfaceConfig | None, desired: InterfaceConf
     return changed
 
 
-def _peer_differs(desired: PeerConfig, live: PeerRuntime) -> bool:
+def _peer_differs(
+    desired: PeerConfig, live: PeerRuntime, previous: PeerConfig | None = None
+) -> bool:
     if desired.allowed_ip_set() != live.allowed_ip_set():
         return True
     want_endpoint = normalize_endpoint(desired.endpoint) if desired.endpoint is not None else None
-    if want_endpoint is not None and want_endpoint != normalize_endpoint(live.endpoint):
-        return True
+    if want_endpoint is not None:
+        # The live endpoint is *learned* state, not configuration: the kernel
+        # rewrites it with the source address of every authenticated packet, so
+        # any peer behind NAT (or roaming) drifts away from whatever the file
+        # seeded. Only a seed that differs from the last applied file is a real
+        # change; the drift alone is not, and re-syncing it would be pointless.
+        seeded = normalize_endpoint(previous.endpoint) if previous is not None else None
+        if want_endpoint != seeded and want_endpoint != normalize_endpoint(live.endpoint):
+            return True
     keepalive = to_int(desired.persistent_keepalive)
     if keepalive is not None and keepalive != live.persistent_keepalive:
         return True
@@ -99,7 +108,7 @@ def _peer_differs(desired: PeerConfig, live: PeerRuntime) -> bool:
 
 
 def _kernel_level_changes(
-    runtime: InterfaceRuntime, desired: InterfaceConfig
+    runtime: InterfaceRuntime, desired: InterfaceConfig, previous: InterfaceConfig | None = None
 ) -> tuple[set[str], PeerChanges]:
     changed: set[str] = set()
     peers = PeerChanges()
@@ -114,10 +123,11 @@ def _kernel_level_changes(
 
     live = {peer.public_key: peer for peer in runtime.peers}
     want = {peer.public_key: peer for peer in desired.peers}
+    was = {peer.public_key: peer for peer in previous.peers} if previous is not None else {}
     for key, peer in want.items():
         if key not in live:
             peers.added.append(short_key(key))
-        elif _peer_differs(peer, live[key]):
+        elif _peer_differs(peer, live[key], was.get(key)):
             peers.changed.append(short_key(key))
     for key in live:
         if key not in want:
@@ -310,7 +320,7 @@ def plan_change(
         reasons.append("interface is not present in this network namespace")
     else:
         file_changed = _file_level_changes(previous_cfg, desired_cfg)
-        kernel_changed, peers = _kernel_level_changes(runtime, desired_cfg)
+        kernel_changed, peers = _kernel_level_changes(runtime, desired_cfg, previous_cfg)
         mode = decide_mode(file_changed, kernel_changed, previous_cfg, desired_cfg)
         if file_changed:
             reasons.append("file-level directives changed: " + ", ".join(sorted(file_changed)))

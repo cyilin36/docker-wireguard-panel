@@ -143,6 +143,7 @@ class PeerView:
     public_key: str
     allowed_ips: list[str] = field(default_factory=list)
     endpoint: str | None = None
+    config_endpoint: str | None = None
     persistent_keepalive: int | None = None
     has_preshared_key: bool = False
     client_ip: str | None = None
@@ -165,6 +166,7 @@ class PeerView:
             "key_id": self.key_id,
             "allowed_ips": list(self.allowed_ips),
             "endpoint": self.endpoint,
+            "config_endpoint": self.config_endpoint,
             "persistent_keepalive": self.persistent_keepalive,
             "has_preshared_key": self.has_preshared_key,
             "client_ip": self.client_ip,
@@ -323,6 +325,7 @@ class PeerManager:
                     public_key=peer.public_key,
                     allowed_ips=list(peer.allowed_ips),
                     endpoint=None if (live is None or live.endpoint == "(none)") else live.endpoint,
+                    config_endpoint=peer.endpoint,
                     persistent_keepalive=to_int(peer.persistent_keepalive),
                     has_preshared_key=peer.preshared_key not in (None, "", "off"),
                     client_ip=client_ip,
