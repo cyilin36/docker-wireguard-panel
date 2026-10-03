@@ -32,18 +32,17 @@
   </div>
 
   <p class="legend">
-    每个「客户端」就是一台要连进来的设备（手机、笔记本、路由器）。
-    <b>下行</b>＝服务器发给它的速度，<b>上行</b>＝它发给服务器的速度；
-    <b>在线</b>＝最近 3 分钟内有过握手。鼠标停在表头上有每条的含义。
+    每个「客户端」就是一台要连进来的设备。
+    <b>下行</b>＝服务器发给它的速度，<b>上行</b>＝它发给服务器的速度，<b>在线</b>＝最近 3 分钟内有过握手。
   </p>
 
   <table id="peers">
     <thead>
       <tr>
-        <th title="客户端名字。存在配置文件的 # 注释里，不影响隧道本身">名称</th>
-        <th title="它在隧道里的地址，由面板从接口地址自动分配">隧道地址</th>
+        <th title="客户端名字，存在配置文件的 # 注释里">名称</th>
+        <th title="它在隧道里的地址，由面板自动分配">隧道地址</th>
         <th title="最近 3 分钟内有握手 = 在线；右侧是最后一次握手距今多久">状态</th>
-        <th title="对方的公网地址:端口。普通客户端由服务器自动学到，没连上时是空的">对端地址</th>
+        <th title="对方的公网地址:端口，没连上时为空">对端地址</th>
         <th class="num" title="服务器 → 客户端，当前速度">下行</th>
         <th class="num" title="客户端 → 服务器，当前速度">上行</th>
         <th class="num" title="建连以来的总流量：↓ 服务器发出，↑ 服务器收到">累计流量</th>
@@ -66,13 +65,11 @@
     <h3>添加客户端</h3>
     <label>名称
       <input name="name" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}" placeholder="比如 laptop、phone" autocomplete="off">
-      <span class="field-hint">自己起个名，只用来区分设备。</span>
     </label>
     <label>额外允许的网段
       <input name="extra_allowed_ips" placeholder="可留空，比如 192.168.1.0/24" autocomplete="off">
-      <span class="field-hint">让这台设备能访问你内网的某个网段时才填；多个用逗号分开。留空表示它只能访问隧道内部。</span>
     </label>
-    <p class="hint">隧道地址会自动分配，密钥和预共享密钥会自动生成，创建后立即生效。</p>
+    <p class="hint">隧道地址、密钥、预共享密钥都会自动生成，创建后立即生效。</p>
     <div class="dialog-actions">
       <button value="cancel" class="ghost">取消</button>
       <button value="ok" class="primary" id="btn-add-ok">创建并生效</button>
@@ -87,29 +84,15 @@
     <input type="hidden" name="original">
     <label>名称
       <input name="new_name" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}" autocomplete="off">
-      <span class="field-hint">改名不会影响对方已导入的配置，隧道照常。</span>
     </label>
-    <label>隧道地址与允许的网段（AllowedIPs）
+    <label>隧道地址（AllowedIPs）
       <input name="allowed_ips" placeholder="10.0.8.2/32, 192.168.1.0/24" autocomplete="off">
-      <span class="field-hint">
-        服务器认这个客户端是「谁」：它发出来的包，来源 IP 必须在这里面。
-        第一项就是它的隧道地址（<code>/32</code>），后面的网段表示允许它使用的来源地址。
-        改这里不会自动改对方的配置，一般只填它自己的隧道地址。
-      </span>
     </label>
     <label>保活间隔（PersistentKeepalive）
       <input name="keepalive" type="number" min="0" max="65535" placeholder="留空 = 不发送">
-      <span class="field-hint">
-        单位秒。对方在 NAT / 防火墙后面时，服务器每隔这么久发一个空包，防止隧道被回收。
-        一般填 <code>25</code>；留空或 0 = 不发。
-      </span>
     </label>
     <label>对端地址（Endpoint）
       <input name="endpoint" placeholder="留空 = 由对方主动连过来" autocomplete="off">
-      <span class="field-hint">
-        格式 <code>IP:端口</code>。只有对方有固定公网地址（比如两个机房互连）时才需要填。
-        普通客户端留空即可 —— 它连上来的时候服务器会自动记住。
-      </span>
     </label>
     <p class="hint">保存后立即生效，不会重启容器。</p>
     <div class="dialog-actions">
@@ -123,32 +106,21 @@
 <dialog id="dlg-settings">
   <form method="dialog" id="form-settings">
     <h3>客户端配置设置</h3>
-    <p class="hint">
-      这里填的是<b>发给客户端</b>的配置里要写的内容，不会写进服务器的 wg0.conf。
-      生成二维码和下载 .conf 时用的是这些值。
-    </p>
+    <p class="hint">这里填的是发给客户端的配置内容，不写进服务器的 wg0.conf。</p>
     <label>服务器地址
       <input name="server_url" placeholder="vpn.example.com 或你的公网 IP" autocomplete="off">
-      <span class="field-hint">客户端要连的地址。不知道就填你的公网 IP，或用域名。</span>
     </label>
     <label>服务器端口
       <input name="server_port" type="number" min="1" max="65535">
-      <span class="field-hint">就是接口的监听端口，没改过的话是 51820。</span>
     </label>
     <label>客户端 DNS
       <input name="client_dns" placeholder="10.0.8.1（可留空）" autocomplete="off">
-      <span class="field-hint">连上后客户端用哪个 DNS。留空表示不改客户端的 DNS。</span>
     </label>
-    <label>客户端默认路由（AllowedIPs）
+    <label>客户端 AllowedIPs
       <input name="client_allowed_ips" placeholder="0.0.0.0/0, ::/0" autocomplete="off">
-      <span class="field-hint">
-        决定客户端<b>什么流量走隧道</b>。<code>0.0.0.0/0, ::/0</code> = 全部流量（全局代理）；
-        只填 <code>10.0.8.0/24</code> = 只有访问隧道内部才走。
-      </span>
     </label>
-    <label>客户端保活间隔（PersistentKeepalive）
-      <input name="client_keepalive" type="number" min="0" max="65535">
-      <span class="field-hint">写进客户端配置的保活秒数，一般 25；0 = 不写。</span>
+    <label>客户端保活间隔
+      <input name="client_keepalive" type="number" min="0" max="65535" placeholder="25">
     </label>
     <div class="dialog-actions">
       <button value="cancel" class="ghost">取消</button>
@@ -160,7 +132,7 @@
 <!-- 二维码 -->
 <dialog id="dlg-qr">
   <h3 id="qr-title">客户端配置</h3>
-  <p class="hint">用手机上的 WireGuard App 扫这个码即可导入；也可以点下面的按钮下载配置文件。</p>
+  <p class="hint">用手机上的 WireGuard App 扫这个码即可导入。</p>
   <div class="qr-wrap"><img id="qr-img" alt="二维码"></div>
   <div class="dialog-actions">
     <a id="qr-download" class="ghost" download>下载 .conf</a>
