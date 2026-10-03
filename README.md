@@ -1,4 +1,4 @@
-# wgpanel
+# docker-wireguard-panel
 
 **[中文 →](README.zh.md)**
 
@@ -12,7 +12,7 @@ Copy [docker-compose.example.yml](docker-compose.example.yml) to `docker-compose
 `PANEL_PASSWORD`, then run `docker compose up -d`. That is the whole file:
 
 ```yaml
-name: wgpanel
+name: docker-wireguard-panel
 
 services:
   wireguard:
@@ -44,8 +44,9 @@ services:
     restart: unless-stopped
 
   wgpanel:
-    build: .
-    image: wgpanel:dev
+    # Published image. Building it yourself works too: comment this out and use
+    # `build: .` plus a tag of your own.
+    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.0-rc1
     container_name: wgpanel
     # Sharing the wireguard network namespace is what lets `wg syncconf`,
     # `wg show` and tcpdump run locally, with no docker socket.
