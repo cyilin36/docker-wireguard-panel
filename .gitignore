@@ -42,6 +42,19 @@ data/
 *.log
 .wgpanel/
 
+# Scratch that must never be published: local overrides, backups, image dumps
+compose.override.yaml
+docker-compose.override.yml
+*.bak
+*.orig
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+scratch/
+tmp/
+*.tmp
+
 # Editors and operating systems
 .idea/
 .vscode/

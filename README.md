@@ -3,30 +3,10 @@
 **[中文 →](README.zh.md)**
 
 A management panel for [linuxserver/wireguard](https://github.com/linuxserver/docker-wireguard).
-Add, edit and delete peers from a web UI, and have the changes take effect
-**without restarting the container** — connected clients are not interrupted.
+Add, edit and delete peers in the browser; the change takes effect **without restarting the
+container**, so connected clients stay online.
 
-## What it does
-
-- **Peer management.** Create a peer and it gets an address, a key pair and a
-  preshared key automatically. Show its QR code, download its `.conf`, edit its
-  AllowedIPs or keepalive, delete it.
-- **Live reload, not restart.** Changes are pushed into the running interface, so
-  established sessions survive. Only route/DNS/hook edits briefly re-attach the
-  interface — and even then the container is not restarted.
-- **Live status.** Per-peer handshake age, endpoint, throughput rate and totals,
-  refreshed every two seconds.
-- **Plan before apply.** Hand-edit `wg0.conf` and the UI shows exactly what would
-  change, with a button to apply it.
-- **Zero downtime by default.** Removing a peer or touching risky settings asks
-  for confirmation first.
-
-## Quick start
-
-You need a running `linuxserver/wireguard` container (or start one with the
-bundled [compose.yaml](compose.yaml)).
-
-The panel shares the wireguard container's network namespace, so add it next to it:
+## Deploy
 
 ```yaml
 services:
@@ -34,17 +14,19 @@ services:
     image: lscr.io/linuxserver/wireguard:latest
     ports:
       - 51820:51820/udp
-      - 47710:47710            # the panel's UI lives in this namespace
+      - 47710:47710        # the panel shares this namespace, so its port is published here
     # ...your existing config
 
   wgpanel:
     build: .
     image: wgpanel:dev
-    network_mode: "service:wireguard"     # shares the namespace: no docker socket
+    network_mode: "service:wireguard"   # shares the namespace, so no docker socket is needed
     cap_add: [NET_ADMIN, NET_RAW]
     volumes:
-      - ./config:/config                  # the same config dir the wireguard container uses
-      - wgpanel-data:/data
+      - ./config:/config                # the same config dir the wireguard container uses
+    environment:
+      PANEL_USER: admin
+      PANEL_PASSWORD: pick-your-own
     command: ["serve"]
     restart: unless-stopped
 ```
@@ -53,46 +35,38 @@ services:
 docker compose up -d
 ```
 
-Then open **http://your-host:47710**.
+Open `http://your-host:47710` and log in with those credentials, then open **设置** and fill in the
+address your clients dial (public IP or domain) — the QR codes and `.conf` files are built from it.
 
-First time in: open **设置** and fill in the server address your clients should
-dial (public IP or domain). The QR codes and `.conf` files are built from it.
+The panel speaks plain HTTP, so give it a strong password if the port is on the internet.
+The [compose.yaml](compose.yaml) in this repo is the same setup, ready to run, with a few
+resource limits on top.
 
-## Usage
+## What it does
 
-**Web UI** — peers, live status, QR codes and config downloads.
+- Peers: create (tunnel address, key pair and preshared key are generated), edit, delete, QR code,
+  `.conf` download
+- Live status: handshake age, endpoint, up/down rate, totals — refreshed every two seconds
+- A hand-edited `wg0.conf` works too: the UI shows what would change, then applies it on one click
+- Deleting a peer or changing the listen port asks for confirmation first
 
-**CLI**, for scripting and for checking things before you touch them:
-
-```sh
-docker compose exec wgpanel wgpanel doctor    # can it manage this interface?
-docker compose exec wgpanel wgpanel plan      # what would apply do? (read-only)
-docker compose exec wgpanel wgpanel apply     # do it
-docker compose exec wgpanel wgpanel show      # live peers (private key redacted)
-```
-
-Risky changes are refused unless you ask:
+## CLI
 
 ```sh
-wgpanel apply --allow-disruptive     # re-attaching the interface, or a private key change
-wgpanel apply --allow-destructive    # deleting peers, or changing the listen port
+docker compose exec wgpanel wgpanel doctor   # can it manage this interface?
+docker compose exec wgpanel wgpanel plan     # what would apply do (read-only)
+docker compose exec wgpanel wgpanel apply    # do it; risky changes need --allow-destructive
+docker compose exec wgpanel wgpanel show     # current peers (keys redacted)
 ```
 
-## Requirements
-
-- The panel container must share the wireguard container's network namespace and
-  run with `NET_ADMIN`; it needs no docker socket.
-- Only one writer at a time: if you also run another tool that rewrites
-  `wg0.conf`, don't use both.
+Only one program may write `wg0.conf` at a time.
 
 ## How it works
 
-`wg-quick` only reads the config when it brings the interface **up** — nothing
-watches the file. So wgpanel pushes the change into the kernel itself:
-`wg-quick strip` removes the directives `wg(8)` does not understand, and
-`wg syncconf` applies only the difference, which is why established peer sessions
-survive. Things `syncconf` cannot touch (addresses, routes, DNS, hooks) get their
-own `ip` commands, or fall back to an in-container `wg-quick down && up`.
+`wg-quick` reads the config only when it brings the interface up; nothing watches the file. So wgpanel
+pushes the change into the kernel itself: `wg-quick strip` removes the directives `wg(8)` does not
+understand, and `wg syncconf` applies only the difference — which is why established sessions survive.
+What `syncconf` cannot touch (addresses, routes, DNS, hooks) gets its own `ip` commands, or falls back
+to an in-container `wg-quick down && up`.
 
-The full reasoning, the decision table and the upstream source references are in
-[docs/design.md](docs/design.md) (Chinese).
+The reasoning and the decision table are in [docs/design.md](docs/design.md) (Chinese).

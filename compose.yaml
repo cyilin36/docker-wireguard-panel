@@ -42,7 +42,6 @@ services:
       # The same bind mount the wireguard container uses, so the panel edits
       # wg0.conf atomically on the same file the interface reads.
       - ./data/wg:/config
-      - panel-data:/data
     environment:
       TZ: Asia/Shanghai
       WG_CONFIG_DIR: /config/wg_confs
@@ -69,6 +68,3 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
-
-volumes:
-  panel-data: {}
