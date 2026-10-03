@@ -39,8 +39,9 @@ tests/
 conftest.py
 docs/
 
-# Runtime output: local compose stacks, wireguard configs, panel state
+# Runtime output: local compose stacks, wireguard configs and keys, panel state
 data/
+config/
 *.log
 .wgpanel/
 
