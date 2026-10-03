@@ -87,9 +87,9 @@ function render() {
                 title="${peer.online ? '最近 3 分钟内有握手' : '最近 3 分钟没有握手'}">${peer.online ? '在线' : '离线'}</span>
           <span class="mono" title="最后一次握手距今多久">${age(peer.latest_handshake)}</span></span></td>
       <td class="mono" data-label="对端地址">${escapeHtml(peer.endpoint || '—')}</td>
-      <td class="num" data-label="下行">${rate(peer.rx_rate)}</td>
-      <td class="num" data-label="上行">${rate(peer.tx_rate)}</td>
-      <td class="num mono" data-label="累计流量">↓${bytes(peer.rx)} ↑${bytes(peer.tx)}</td>
+      <td class="num" data-label="下行">${rate(peer.tx_rate)}</td>
+      <td class="num" data-label="上行">${rate(peer.rx_rate)}</td>
+      <td class="num mono" data-label="累计流量">↓${bytes(peer.tx)} ↑${bytes(peer.rx)}</td>
       <td class="actions-cell">
         <button class="tiny" data-edit="${escapeHtml(peer.name)}">编辑</button>
         <button class="tiny" data-qr="${escapeHtml(peer.name)}" ${peer.has_keys ? '' : 'disabled title="没有存私钥，无法导出配置"'}>二维码</button>
