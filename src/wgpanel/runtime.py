@@ -112,7 +112,13 @@ def _ip_json(runner: Runner, argv: Sequence[str]) -> list[dict]:
     return [item for item in data if isinstance(item, dict)]
 
 
-def _parse_dump(text: str) -> InterfaceRuntime:
+def parse_dump(text: str) -> InterfaceRuntime:
+    """Parse ``wg show <iface> dump`` text into an :class:`InterfaceRuntime`.
+
+    Public because the traffic sampler only needs the counters, and running the
+    whole :func:`read_interface` (three extra ``ip -j`` calls) once a second would
+    be wasteful.
+    """
     runtime = InterfaceRuntime()
     device_seen = False
     for line in text.splitlines():
@@ -148,7 +154,7 @@ def read_interface(interface: str, runner: Runner) -> InterfaceRuntime:
     if not result.ok or not result.stdout.strip():
         return runtime
 
-    runtime = _parse_dump(result.stdout)
+    runtime = parse_dump(result.stdout)
     runtime.name = interface
     runtime.exists = True
 

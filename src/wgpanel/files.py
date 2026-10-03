@@ -59,6 +59,23 @@ def read_bytes(path: str) -> bytes:
         return b""
 
 
+def append_bytes(path: str, data: bytes) -> None:
+    """Append ``data`` to ``path``, creating it if needed.
+
+    Binary on purpose: the traffic journal must round-trip byte for byte, and a
+    text-mode write would be free to translate newlines. ``fsync`` costs one disk
+    flush per append, which is once a minute here — cheap next to the guarantee
+    that a killed panel does not lose the last samples.
+    """
+    ensure_dir(os.path.dirname(os.path.abspath(path)) or ".")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def file_revision(path: str) -> str:
     return hashlib.sha256(read_bytes(path)).hexdigest()
 
