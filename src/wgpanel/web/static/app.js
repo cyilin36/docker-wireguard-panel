@@ -109,6 +109,9 @@ function render() {
     <dt>配置文件</dt><dd>${escapeHtml(state.conf_path)}</dd>`;
 
   renderBanner();
+  renderTrafficTiles();
+  renderTrafficScope();
+  renderTrafficLegend();
 }
 
 function renderBanner() {
@@ -141,6 +144,260 @@ function renderBanner() {
     ${!state.settings_ready ? '<button class="ghost tiny" id="banner-settings">去设置</button>' : ''}</div>`;
   const go = $('#banner-settings');
   if (go) go.onclick = openSettings;
+}
+
+/* ---------------------------------------------------------------- traffic */
+/* Rate waveform for the whole tunnel or a single peer. The backend samples the
+   kernel counters and serves exactly 60 buckets per range; a null bucket means
+   "not sampled" (panel was down) and has to break the line, while 0 means
+   "sampled, idle". Down = server → client (wg tx), up = client → server (rx). */
+const TRAFFIC_RANGES = [60, 3600, 43200, 86400, 604800, 1296000];
+const TRAFFIC_KEY = 'wgpanel.traffic';
+const traffic = { scope: 'all', window: 3600, points: [], step: 60, error: null, geometry: null };
+let trafficTimer = null;
+let trafficScopeSignature = '';
+let trafficResize = null;
+
+function loadTrafficChoice() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TRAFFIC_KEY) || 'null');
+    if (saved && TRAFFIC_RANGES.indexOf(saved.window) >= 0) traffic.window = saved.window;
+    if (saved && typeof saved.scope === 'string') traffic.scope = saved.scope;
+  } catch (_) { /* a corrupt preference is not worth failing over */ }
+}
+
+function saveTrafficChoice() {
+  try {
+    localStorage.setItem(TRAFFIC_KEY, JSON.stringify({ window: traffic.window, scope: traffic.scope }));
+  } catch (_) { /* private mode */ }
+}
+
+function markTrafficRange() {
+  document.querySelectorAll('#traffic-range [data-window]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(Number(button.dataset.window) === traffic.window));
+  });
+}
+
+function renderTrafficTiles() {
+  const t = (state && state.traffic) || { down: 0, up: 0, down_rate: 0, up_rate: 0 };
+  $('#traffic-tiles').innerHTML = `
+    <div class="tile"><span class="tile-label">总下行流量</span>
+      <b class="tile-value">${bytes(t.down)}</b><small>服务器 → 客户端，面板累计</small></div>
+    <div class="tile"><span class="tile-label">总上行流量</span>
+      <b class="tile-value">${bytes(t.up)}</b><small>客户端 → 服务器，面板累计</small></div>
+    <div class="tile"><span class="tile-label">当前下行速率</span>
+      <b class="tile-value">${rate(t.down_rate)}</b><small>全部客户端合计</small></div>
+    <div class="tile"><span class="tile-label">当前上行速率</span>
+      <b class="tile-value">${rate(t.up_rate)}</b><small>全部客户端合计</small></div>`;
+}
+
+/* Rebuilding the <select> on every 2s refresh would close an open dropdown, so
+   only touch it when the peer list actually changed. */
+function renderTrafficScope() {
+  const peers = (state && state.peers) || [];
+  const signature = peers.map((peer) => peer.public_key + ':' + peer.name).join('|');
+  const select = $('#traffic-scope');
+  if (signature !== trafficScopeSignature) {
+    trafficScopeSignature = signature;
+    select.innerHTML = ['<option value="all">全部客户端（合计）</option>']
+      .concat(peers.map((peer) =>
+        `<option value="${escapeHtml(peer.public_key)}">${escapeHtml(peer.name)}</option>`))
+      .join('');
+  }
+  if (traffic.scope !== 'all' && !peers.some((peer) => peer.public_key === traffic.scope)) {
+    traffic.scope = 'all';
+  }
+  select.value = traffic.scope;
+}
+
+function timeLabel(ts) {
+  const date = new Date(ts * 1000);
+  const two = (n) => String(n).padStart(2, '0');
+  if (traffic.window <= 60) {
+    return `${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
+  }
+  if (traffic.window <= 86400) return `${two(date.getHours())}:${two(date.getMinutes())}`;
+  return `${two(date.getMonth() + 1)}-${two(date.getDate())}`;
+}
+
+function lastFilledPoint() {
+  for (let i = traffic.points.length - 1; i >= 0; i--) {
+    if (traffic.points[i][1] !== null || traffic.points[i][2] !== null) return traffic.points[i];
+  }
+  return null;
+}
+
+function renderTrafficLegend() {
+  const bits = [];
+  const last = lastFilledPoint();
+  bits.push(`<span class="chart-swatch down"></span>下行 ${last && last[1] !== null ? rate(last[1]) : '—'}`);
+  bits.push(`<span class="chart-swatch up"></span>上行 ${last && last[2] !== null ? rate(last[2]) : '—'}`);
+  const since = state && state.traffic && state.traffic.since;
+  if (since) {
+    bits.push(`自 ${escapeHtml(new Date(since * 1000).toLocaleString('zh-CN', { hour12: false }))} 起累计`);
+  }
+  const error = (state && state.traffic && state.traffic.error) || traffic.error;
+  if (error) bits.push(`<span class="warn-text">${escapeHtml(error)}</span>`);
+  $('#traffic-legend').innerHTML = bits.join(' · ');
+}
+
+function drawTrafficChart() {
+  const svg = $('#traffic-chart');
+  const empty = $('#traffic-empty');
+  const tip = $('#traffic-tip');
+  const points = traffic.points;
+  const filled = points.filter((point) => point[1] !== null || point[2] !== null);
+
+  if (points.length < 2 || filled.length < 2) {
+    svg.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.textContent = points.length ? '正在采集…' : '暂无数据';
+    tip.classList.add('hidden');
+    traffic.geometry = null;
+    return;
+  }
+  svg.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  /* The viewBox is set from the rendered pixel width so text keeps its real size
+     instead of being scaled down with the drawing. */
+  const width = Math.max(320, svg.parentElement.clientWidth || 720);
+  const height = width < 520 ? 220 : 300;
+  const pad = { left: 62, right: 14, top: 14, bottom: 26 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  let max = 0;
+  points.forEach((point) => {
+    if (point[1] !== null) max = Math.max(max, point[1]);
+    if (point[2] !== null) max = Math.max(max, point[2]);
+  });
+  /* An all-idle window still needs an axis: scale to 1 KB/s so the labels read
+     as rates instead of four identical "0 B/s". */
+  const idle = !(max > 0);
+  if (idle) max = 1024;
+
+  const x = (index) => pad.left + (index / (points.length - 1)) * plotW;
+  const y = (value) => pad.top + (1 - value / max) * plotH;
+
+  function pathFor(column) {
+    let d = '';
+    let open = false;
+    points.forEach((point, index) => {
+      const value = point[column];
+      if (value === null) { open = false; return; }
+      d += `${open ? 'L' : 'M'}${x(index).toFixed(1)} ${y(value).toFixed(1)} `;
+      open = true;
+    });
+    return d.trim();
+  }
+
+  const grid = [];
+  for (let i = 0; i <= 4; i++) {
+    const gy = y((max * i) / 4);
+    grid.push(`<line class="chart-grid" x1="${pad.left}" y1="${gy.toFixed(1)}" `
+      + `x2="${(width - pad.right).toFixed(1)}" y2="${gy.toFixed(1)}"></line>`);
+    grid.push(`<text class="chart-axis" x="${pad.left - 8}" y="${(gy + 4).toFixed(1)}" `
+      + `text-anchor="end">${escapeHtml(rate((max * i) / 4))}</text>`);
+  }
+
+  const last = points.length - 1;
+  const axis = [0, Math.floor(last / 3), Math.floor((2 * last) / 3), last].map((index) => {
+    const anchor = index === 0 ? 'start' : (index === last ? 'end' : 'middle');
+    return `<text class="chart-axis" x="${x(index).toFixed(1)}" y="${height - 8}" `
+      + `text-anchor="${anchor}">${escapeHtml(timeLabel(points[index][0]))}</text>`;
+  }).join('');
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('height', String(height));
+  const note = idle
+    ? `<text class="chart-axis" x="${(pad.left + plotW / 2).toFixed(1)}" `
+      + `y="${(pad.top + plotH / 2).toFixed(1)}" text-anchor="middle">窗口内无流量</text>`
+    : '';
+  svg.innerHTML = grid.join('') + axis + note
+    + `<path class="chart-line down" d="${pathFor(1)}"></path>`
+    + `<path class="chart-line up" d="${pathFor(2)}"></path>`
+    + `<line class="chart-cursor hidden" id="traffic-cursor" y1="${pad.top}" `
+    + `y2="${(pad.top + plotH).toFixed(1)}"></line>`
+    + '<circle class="chart-dot down hidden" id="traffic-dot-down" r="3.5"></circle>'
+    + '<circle class="chart-dot up hidden" id="traffic-dot-up" r="3.5"></circle>'
+    + `<rect id="traffic-hit" x="${pad.left}" y="${pad.top}" width="${plotW}" `
+    + `height="${plotH}" fill="transparent"></rect>`;
+  traffic.geometry = { x, y, pad, width, plotW };
+  bindTrafficHover();
+}
+
+function bindTrafficHover() {
+  const svg = $('#traffic-chart');
+  const hit = svg.querySelector('#traffic-hit');
+  if (!hit || !traffic.geometry) return;
+  const geometry = traffic.geometry;
+  const tip = $('#traffic-tip');
+  const cursor = svg.querySelector('#traffic-cursor');
+  const dots = { down: svg.querySelector('#traffic-dot-down'), up: svg.querySelector('#traffic-dot-up') };
+  const wrap = svg.parentElement;
+
+  function hide() {
+    cursor.classList.add('hidden');
+    dots.down.classList.add('hidden');
+    dots.up.classList.add('hidden');
+    tip.classList.add('hidden');
+  }
+
+  hit.addEventListener('mousemove', (event) => {
+    const box = svg.getBoundingClientRect();
+    const scale = box.width ? geometry.width / box.width : 1;
+    const px = (event.clientX - box.left) * scale;
+    const ratio = (px - geometry.pad.left) / geometry.plotW;
+    const index = Math.max(0, Math.min(traffic.points.length - 1,
+      Math.round(ratio * (traffic.points.length - 1))));
+    const point = traffic.points[index];
+
+    cursor.setAttribute('x1', geometry.x(index));
+    cursor.setAttribute('x2', geometry.x(index));
+    cursor.classList.remove('hidden');
+    [['down', 1], ['up', 2]].forEach(([key, column]) => {
+      const value = point[column];
+      const dot = dots[key];
+      if (value === null) { dot.classList.add('hidden'); return; }
+      dot.setAttribute('cx', geometry.x(index));
+      dot.setAttribute('cy', geometry.y(value));
+      dot.classList.remove('hidden');
+    });
+
+    const when = new Date(point[0] * 1000).toLocaleString('zh-CN', { hour12: false });
+    tip.innerHTML = `<b>${escapeHtml(when)}</b><br>下行 ${point[1] === null ? '—' : rate(point[1])}`
+      + `<br>上行 ${point[2] === null ? '—' : rate(point[2])}`;
+    tip.classList.remove('hidden');
+    const wrapBox = wrap.getBoundingClientRect();
+    tip.style.left = `${Math.max(80, Math.min(wrapBox.width - 80, event.clientX - wrapBox.left))}px`;
+  });
+  hit.addEventListener('mouseleave', hide);
+}
+
+async function refreshTraffic() {
+  if (document.hidden) return;
+  try {
+    const query = `window=${traffic.window}&scope=${encodeURIComponent(traffic.scope)}`;
+    const data = await api('/api/traffic?' + query);
+    traffic.points = data.points || [];
+    traffic.step = data.step || 1;
+    traffic.error = null;
+  } catch (err) {
+    if (redirecting) return;
+    traffic.error = err.message || '流量数据读取失败';
+  }
+  renderTrafficTiles();
+  renderTrafficLegend();
+  drawTrafficChart();
+}
+
+function scheduleTraffic() {
+  clearTimeout(trafficTimer);
+  trafficTimer = setTimeout(() => {
+    refreshTraffic();
+    scheduleTraffic();
+  }, traffic.window === 60 ? 1000 : 5000);
 }
 
 /* ---------------------------------------------------------------- actions */
@@ -329,5 +586,39 @@ $('#peers-body').addEventListener('click', (ev) => {
   if (del) guard(() => deletePeer(del));
 });
 
+$('#traffic-range').addEventListener('click', (ev) => {
+  const button = ev.target.closest('[data-window]');
+  if (!button) return;
+  const wanted = Number(button.dataset.window);
+  if (!TRAFFIC_RANGES.includes(wanted) || wanted === traffic.window) return;
+  traffic.window = wanted;
+  traffic.points = [];
+  saveTrafficChoice();
+  markTrafficRange();
+  refreshTraffic();
+  scheduleTraffic();
+});
+
+$('#traffic-scope').addEventListener('change', (ev) => {
+  traffic.scope = ev.target.value || 'all';
+  traffic.points = [];
+  saveTrafficChoice();
+  refreshTraffic();
+});
+
+/* The chart is drawn in device-independent units taken from the wrapper width,
+   so it has to be redrawn when that width changes. One frame of debounce keeps
+   a drag-resize from re-rendering on every pixel. */
+if (window.ResizeObserver) {
+  new ResizeObserver(() => {
+    if (trafficResize) cancelAnimationFrame(trafficResize);
+    trafficResize = requestAnimationFrame(() => drawTrafficChart());
+  }).observe($('.chart-wrap'));
+}
+
+loadTrafficChoice();
+markTrafficRange();
 refresh();
+refreshTraffic();
+scheduleTraffic();
 refreshTimer = setInterval(refresh, 2000);
