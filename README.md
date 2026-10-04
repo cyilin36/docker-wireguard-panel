@@ -94,19 +94,6 @@ internet.
 Traffic sampling runs once a second by default; set `PANEL_TRAFFIC_INTERVAL` (seconds, `0` turns it
 off) in the `wgpanel` service to change that. History lives under `WG_STATE_DIR/traffic/`.
 
-## What it does
-
-- Peers: create (tunnel address, key pair and preshared key are generated), edit, delete, QR code,
-  `.conf` download
-- Live status: handshake age, endpoint, up/down rate, totals — refreshed every two seconds
-- Traffic: lifetime up/down totals and current rates for all peers together, plus a rate waveform
-  with both directions in one plot. Pick the sum or a single peer, and a range of
-  1 minute / 1 hour / 12 hours / 24 hours / 7 days / 15 days (the 1-minute range refreshes every
-  second). Sampling and history are persisted, so an interface restart that zeroes the kernel
-  counters never makes the lifetime totals go backwards
-- A hand-edited `wg0.conf` works too: the UI shows what would change, then applies it on one click
-- Deleting a peer or changing the listen port asks for confirmation first
-
 ## CLI
 
 ```sh
