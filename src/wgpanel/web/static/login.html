@@ -10,19 +10,24 @@
 </head>
 <body class="login-body">
 
+<!-- Same plate as the panel: hairline-divided, mono wordmark, 4px controls.
+     The theme switcher deliberately lives only on the panel, not here. -->
 <form id="login-form" class="login-card" autocomplete="on">
-  <h1>wgpanel</h1>
-  <p class="login-sub">请输入账号和密码</p>
+  <div class="login-head">
+    <h1>wgpanel</h1>
+    <p class="login-sub">请输入账号和密码</p>
+  </div>
+  <div class="login-body-fields">
+    <label>账号
+      <input name="user" autocomplete="username" autofocus required>
+    </label>
+    <label>密码
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
 
-  <label>账号
-    <input name="user" autocomplete="username" autofocus required>
-  </label>
-  <label>密码
-    <input name="password" type="password" autocomplete="current-password" required>
-  </label>
-
-  <p class="login-error hidden" id="login-error"></p>
-  <button class="primary" type="submit" id="login-submit">登录</button>
+    <p class="login-error hidden" id="login-error"></p>
+    <button class="primary" type="submit" id="login-submit">登录</button>
+  </div>
 </form>
 
 <script>
