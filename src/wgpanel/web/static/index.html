@@ -66,22 +66,17 @@
   <div class="card-head">
     <h2>流量</h2>
     <div class="actions">
-      <select id="traffic-scope" aria-label="统计对象"></select>
-      <div class="range-switch" id="traffic-range" role="group" aria-label="时间范围">
-        <button type="button" data-window="60" aria-pressed="false" title="最近 1 分钟，每秒刷新">1分钟</button>
-        <button type="button" data-window="3600" aria-pressed="true" title="最近 1 小时">1小时</button>
-        <button type="button" data-window="43200" aria-pressed="false" title="最近 12 小时">12小时</button>
-        <button type="button" data-window="86400" aria-pressed="false" title="最近 24 小时">24小时</button>
-        <button type="button" data-window="604800" aria-pressed="false" title="最近 7 天">7天</button>
-        <button type="button" data-window="1296000" aria-pressed="false" title="最近 15 天">15天</button>
-      </div>
+      <select id="traffic-scope" aria-label="统计对象" title="统计全部客户端，还是某一个客户端"></select>
+      <select id="traffic-range" aria-label="时间范围" title="波形的时间范围；1 分钟档每秒刷新">
+        <option value="60">1 分钟</option>
+        <option value="3600" selected>1 小时</option>
+        <option value="43200">12 小时</option>
+        <option value="86400">24 小时</option>
+        <option value="604800">7 天</option>
+        <option value="1296000">15 天</option>
+      </select>
     </div>
   </div>
-
-  <p class="legend">
-    <b>下行</b>＝服务器发给客户端，<b>上行</b>＝客户端发给服务器。
-    累计值从面板第一次采样算起，接口重启导致内核计数器清零也不会回退。
-  </p>
 
   <div class="tiles" id="traffic-tiles"></div>
 

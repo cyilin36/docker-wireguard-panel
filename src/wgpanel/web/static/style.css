@@ -164,27 +164,27 @@ button[disabled]:hover { border-color: var(--line); background: var(--panel-2); 
 /* The pill clips a ring drawn outside it, so its segments get an inset one — and
    because the pressed segment is filled with --accent-2, that ring has to be the
    opposite colour or focus on the active theme would be invisible. */
-.theme-switch button:focus-visible, .range-switch button:focus-visible {
+.theme-switch button:focus-visible {
   outline: 2px solid var(--on-accent); outline-offset: -2px;
   box-shadow: 0 0 0 2px var(--accent-2);
 }
 
 /* Three-state theme picker: auto / day / night. The active segment is marked by
    aria-pressed (theme.js) and matched here, so there is one source of truth. */
-.theme-switch, .range-switch {
+.theme-switch {
   display: inline-flex; align-items: center; gap: 2px;
   background: var(--panel-2); border: 1px solid var(--line);
   border-radius: 999px; padding: 2px;
 }
-.theme-switch button, .range-switch button {
+.theme-switch button {
   border: 1px solid transparent; background: transparent; color: var(--muted);
   border-radius: 999px; padding: 4px 11px; font-size: 12px;
 }
-.theme-switch button:hover, .range-switch button:hover { color: var(--text); background: transparent; border-color: transparent; }
-.theme-switch button[aria-pressed="true"], .range-switch button[aria-pressed="true"] {
+.theme-switch button:hover { color: var(--text); background: transparent; border-color: transparent; }
+.theme-switch button[aria-pressed="true"] {
   background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); font-weight: 600;
 }
-.theme-switch button[aria-pressed="true"]:hover, .range-switch button[aria-pressed="true"]:hover { background: var(--accent-2); color: var(--on-accent); }
+.theme-switch button[aria-pressed="true"]:hover { background: var(--accent-2); color: var(--on-accent); }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
@@ -282,11 +282,13 @@ body.login-body {
 .tile-value { font-size: 18px; font-variant-numeric: tabular-nums; }
 .tile small { display: block; color: var(--faint); font-size: 11px; margin-top: 2px; }
 
-#traffic-scope {
-  font: inherit; padding: 6px 10px; border-radius: var(--radius-sm); max-width: 42vw;
+#traffic-scope, #traffic-range {
+  font: inherit; padding: 6px 10px; border-radius: var(--radius-sm); max-width: 44vw;
   border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text);
 }
-#traffic-scope:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus); }
+#traffic-scope:focus, #traffic-range:focus {
+  outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus);
+}
 
 .chart-wrap { position: relative; margin: 0 0 10px; }
 #traffic-chart { display: block; width: 100%; height: auto; overflow: visible; }
@@ -350,7 +352,7 @@ body.login-body {
      would not. */
   td.actions-cell::before { content: none; }
   .tiles { grid-template-columns: 1fr 1fr; }
-  #traffic-scope { max-width: 100%; }
+  #traffic-scope, #traffic-range { max-width: 100%; }
   #traffic-card .card-head .actions { justify-content: flex-start; }}
 
 @media (prefers-reduced-motion: reduce) {

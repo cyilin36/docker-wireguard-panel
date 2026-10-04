@@ -172,23 +172,32 @@ function saveTrafficChoice() {
   } catch (_) { /* private mode */ }
 }
 
-function markTrafficRange() {
-  document.querySelectorAll('#traffic-range [data-window]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(Number(button.dataset.window) === traffic.window));
-  });
+/* The range is a plain <select> whose options are part of the markup; this only
+   keeps it in step with the stored choice. */
+function renderTrafficRange() {
+  const select = $('#traffic-range');
+  select.value = String(traffic.window);
+  if (!select.value) {
+    // A stored value the markup no longer offers (or a hand-edited page).
+    traffic.window = 3600;
+    select.value = String(traffic.window);
+  }
 }
 
 function renderTrafficTiles() {
   const t = (state && state.traffic) || { down: 0, up: 0, down_rate: 0, up_rate: 0 };
+  /* The two totals are the one number that must not be read as "this session":
+     they are accumulated from the panel's first sample onwards. */
+  const lifetime = '从面板第一次采样起累计；接口重启令内核计数器清零也不会回退';
   $('#traffic-tiles').innerHTML = `
-    <div class="tile"><span class="tile-label">总下行流量</span>
+    <div class="tile" title="${lifetime}"><span class="tile-label">总下行流量</span>
       <b class="tile-value">${bytes(t.down)}</b><small>服务器 → 客户端，面板累计</small></div>
-    <div class="tile"><span class="tile-label">总上行流量</span>
+    <div class="tile" title="${lifetime}"><span class="tile-label">总上行流量</span>
       <b class="tile-value">${bytes(t.up)}</b><small>客户端 → 服务器，面板累计</small></div>
-    <div class="tile"><span class="tile-label">当前下行速率</span>
-      <b class="tile-value">${rate(t.down_rate)}</b><small>全部客户端合计</small></div>
-    <div class="tile"><span class="tile-label">当前上行速率</span>
-      <b class="tile-value">${rate(t.up_rate)}</b><small>全部客户端合计</small></div>`;
+    <div class="tile" title="全部客户端合计，按最近一次采样计算"><span class="tile-label">当前下行速率</span>
+      <b class="tile-value">${rate(t.down_rate)}</b><small>服务器 → 客户端，实时</small></div>
+    <div class="tile" title="全部客户端合计，按最近一次采样计算"><span class="tile-label">当前上行速率</span>
+      <b class="tile-value">${rate(t.up_rate)}</b><small>客户端 → 服务器，实时</small></div>`;
 }
 
 /* Rebuilding the <select> on every 2s refresh would close an open dropdown, so
@@ -585,15 +594,12 @@ $('#peers-body').addEventListener('click', (ev) => {
   if (del) guard(() => deletePeer(del));
 });
 
-$('#traffic-range').addEventListener('click', (ev) => {
-  const button = ev.target.closest('[data-window]');
-  if (!button) return;
-  const wanted = Number(button.dataset.window);
+$('#traffic-range').addEventListener('change', (ev) => {
+  const wanted = Number(ev.target.value);
   if (!TRAFFIC_RANGES.includes(wanted) || wanted === traffic.window) return;
   traffic.window = wanted;
   traffic.points = [];
   saveTrafficChoice();
-  markTrafficRange();
   refreshTraffic();
   scheduleTraffic();
 });
@@ -616,7 +622,7 @@ if (window.ResizeObserver) {
 }
 
 loadTrafficChoice();
-markTrafficRange();
+renderTrafficRange();
 refresh();
 refreshTraffic();
 scheduleTraffic();
