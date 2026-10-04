@@ -16,34 +16,34 @@
 
 /* --------------------------------------------------------------- tokens -- */
 :root {
-  /* light (default) */
-  --bg: #ffffff;
-  --bg-soft: #f6f8fa;
+  /* light (default) — "rack grey + petrol": see docs/design.md */
+  --bg: #f3f5f2;
+  --bg-soft: #eaede7;
   --panel: #ffffff;
-  --panel-2: #f6f8fa;
-  --line: #d8dee4;
-  --line-strong: #818b94;
-  --text: #1f2328;
-  --muted: #59636e;
-  --faint: #6e7781;
-  --accent: #1a7f37;          /* online / success */
-  --accent-2: #0969da;        /* primary action */
+  --panel-2: #eef0ec;
+  --line: #d3d8d2;
+  --line-strong: #6d7a72;
+  --text: #17201a;
+  --muted: #52605a;
+  --faint: #66756d;
+  --accent: #1c7a45;          /* online / success */
+  --accent-2: #0e5f6b;        /* primary action: petrol, not the usual blue */
   --on-accent: #ffffff;
-  --danger: #cf222e;
-  --danger-text: #a40e26;
-  --ok-tint: rgba(26, 127, 55, .08);
-  --ok-line: rgba(26, 127, 55, .35);
-  --warn-tint: rgba(154, 103, 0, .08);
-  --warn-line: rgba(154, 103, 0, .38);
-  --danger-tint: rgba(207, 34, 46, .07);
-  --danger-line: rgba(207, 34, 46, .38);
-  --row-hover: rgba(31, 35, 40, .03);
-  --overlay: rgba(31, 35, 40, .45);
-  --focus: rgba(9, 105, 218, .35);
-  --chart-down: #0969da;
-  --chart-up: #1a7f37;
-  --radius: 10px;
-  --radius-sm: 8px;
+  --danger: #c0362c;
+  --danger-text: #a02519;
+  --ok-tint: rgba(28, 122, 69, .09);
+  --ok-line: rgba(28, 122, 69, .38);
+  --warn-tint: rgba(146, 101, 8, .09);
+  --warn-line: rgba(146, 101, 8, .42);
+  --danger-tint: rgba(192, 54, 44, .08);
+  --danger-line: rgba(192, 54, 44, .40);
+  --row-hover: rgba(23, 32, 26, .035);
+  --overlay: rgba(23, 32, 26, .45);
+  --focus: rgba(14, 95, 107, .30);
+  --chart-down: #0e5f6b;      /* server -> client */
+  --chart-up: #b26a12;        /* client -> server */
+  --radius: 6px;
+  --radius-sm: 4px;
   color-scheme: light;
 }
 
@@ -51,61 +51,61 @@
    choice and the `auto` + dark-system case. Keep the two in sync by hand: one
    block is a selector, the other is a media query, and CSS cannot share them. */
 [data-theme="dark"] {
-  --bg: #0b0f14;
-  --bg-soft: #0e141b;
-  --panel: #131a22;
-  --panel-2: #161f29;
-  --line: #24313d;
-  --line-strong: #556a7d;
-  --text: #e6edf3;
-  --muted: #8b9bab;
-  --faint: #7d8b9a;
-  --accent: #3fb950;
-  --accent-2: #1a6fd4;
+  --bg: #0d1114;
+  --bg-soft: #12181c;
+  --panel: #151c21;
+  --panel-2: #1a2228;
+  --line: #26313a;
+  --line-strong: #5c6b74;
+  --text: #e4eae6;
+  --muted: #93a39d;
+  --faint: #8a9a94;
+  --accent: #46c07a;
+  --accent-2: #14707c;
   --on-accent: #ffffff;
-  --danger: #f85149;
-  --danger-text: #ffb4ae;
-  --ok-tint: rgba(63, 185, 80, .08);
-  --ok-line: rgba(63, 185, 80, .40);
-  --warn-tint: rgba(210, 153, 34, .08);
-  --warn-line: rgba(210, 153, 34, .45);
-  --danger-tint: rgba(248, 81, 73, .08);
-  --danger-line: rgba(248, 81, 73, .45);
+  --danger: #f2706a;
+  --danger-text: #ffb3ad;
+  --ok-tint: rgba(70, 192, 122, .09);
+  --ok-line: rgba(70, 192, 122, .40);
+  --warn-tint: rgba(214, 158, 45, .09);
+  --warn-line: rgba(214, 158, 45, .45);
+  --danger-tint: rgba(242, 112, 106, .09);
+  --danger-line: rgba(242, 112, 106, .45);
   --row-hover: rgba(255, 255, 255, .03);
-  --overlay: rgba(0, 0, 0, .6);
-  --focus: rgba(88, 166, 255, .45);
-  --chart-down: #58a6ff;
-  --chart-up: #3fb950;
+  --overlay: rgba(0, 0, 0, .60);
+  --focus: rgba(90, 200, 210, .45);
+  --chart-down: #4fb8c4;
+  --chart-up: #d99a3c;
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --bg: #0b0f14;
-    --bg-soft: #0e141b;
-    --panel: #131a22;
-    --panel-2: #161f29;
-    --line: #24313d;
-    --line-strong: #556a7d;
-    --text: #e6edf3;
-    --muted: #8b9bab;
-    --faint: #7d8b9a;
-    --accent: #3fb950;
-    --accent-2: #1a6fd4;
+    --bg: #0d1114;
+    --bg-soft: #12181c;
+    --panel: #151c21;
+    --panel-2: #1a2228;
+    --line: #26313a;
+    --line-strong: #5c6b74;
+    --text: #e4eae6;
+    --muted: #93a39d;
+    --faint: #8a9a94;
+    --accent: #46c07a;
+    --accent-2: #14707c;
     --on-accent: #ffffff;
-    --danger: #f85149;
-    --danger-text: #ffb4ae;
-    --ok-tint: rgba(63, 185, 80, .08);
-    --ok-line: rgba(63, 185, 80, .40);
-    --warn-tint: rgba(210, 153, 34, .08);
-    --warn-line: rgba(210, 153, 34, .45);
-    --danger-tint: rgba(248, 81, 73, .08);
-    --danger-line: rgba(248, 81, 73, .45);
+    --danger: #f2706a;
+    --danger-text: #ffb3ad;
+    --ok-tint: rgba(70, 192, 122, .09);
+    --ok-line: rgba(70, 192, 122, .40);
+    --warn-tint: rgba(214, 158, 45, .09);
+    --warn-line: rgba(214, 158, 45, .45);
+    --danger-tint: rgba(242, 112, 106, .09);
+    --danger-line: rgba(242, 112, 106, .45);
     --row-hover: rgba(255, 255, 255, .03);
-    --overlay: rgba(0, 0, 0, .6);
-    --focus: rgba(88, 166, 255, .45);
-    --chart-down: #58a6ff;
-    --chart-up: #3fb950;
+    --overlay: rgba(0, 0, 0, .60);
+    --focus: rgba(90, 200, 210, .45);
+    --chart-down: #4fb8c4;
+    --chart-up: #d99a3c;
     color-scheme: dark;
   }
 }
