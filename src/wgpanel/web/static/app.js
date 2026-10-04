@@ -44,6 +44,33 @@ function bytes(n) {
 
 function rate(n) { return bytes(n) + '/s'; }
 
+/* ------------------------------------------------------------ rate meters */
+/* Scale each bar against the busiest peer on screen so the ledger reads without
+   a legend. 1 KB/s is a floor, not a round number: it keeps an all-idle panel
+   from magnifying rounding noise into full bars. No traffic = empty track, which
+   is still legible because the track itself is drawn. */
+function ratePeak() {
+  let peak = 1024;
+  (state.peers || []).forEach((peer) => {
+    peak = Math.max(peak, peer.tx_rate || 0, peer.rx_rate || 0);
+  });
+  return peak;
+}
+
+function meterWidth(value, peak) {
+  if (!(value > 0)) return 0;
+  return Math.max(6, Math.round((value / peak) * 100));
+}
+
+/* The number is the value; the bar is decoration (aria-hidden). 下行's track sits
+   flush against the border it shares with 上行 and its fill grows outward, so two
+   busy directions read as one barbell — see .rate/.meter in style.css. */
+function rateMeter(value, direction, peak) {
+  const bar = `<span class="meter" aria-hidden="true"><i style="width:${meterWidth(value, peak)}%"></i></span>`;
+  const text = `<span class="rate-value">${rate(value)}</span>`;
+  return `<span class="rate ${direction}">${direction === 'down' ? text + bar : bar + text}</span>`;
+}
+
 function age(ts) {
   if (!ts) return '从未';
   const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
@@ -71,14 +98,27 @@ function render() {
   if (!state) return;
   const rt = state.runtime;
 
-  $('#iface').textContent = `${state.interface} · ${rt.listen_port || '—'} · ${(rt.addresses || []).join(', ') || '无地址'}`;
-  $('#iface').title = '接口名 · 监听端口 · 隧道地址';
+  /* The identity strip is the live reading of the tunnel: interface, address,
+     listen port, MTU, the file being edited, and the public key the clients are
+     configured with. Nothing here is duplicated further down the page. */
+  $('#iface').textContent = state.interface;
+  $('#iface-address').textContent = (rt.addresses || []).join(', ') || '—';
+  $('#iface-port').textContent = rt.listen_port ? String(rt.listen_port) : '—';
+  $('#iface-mtu').textContent = rt.mtu == null ? '—' : String(rt.mtu);
+  $('#iface-conf').textContent = state.conf_path || '—';
+  $('#iface-key').textContent = rt.public_key || '—';
+  $('#iface-key').title = rt.public_key || '';
+  $('#iface-state').textContent = !rt.exists
+    ? '接口不存在（wireguard 容器可能在重启）'
+    : (rt.up ? '已启用' : '接口存在但未启用');
+
   const dot = $('#status-dot');
   dot.className = 'dot ' + (rt.exists && rt.up ? 'up' : 'down');
   dot.title = rt.exists ? (rt.up ? '隧道接口已启用' : '接口存在但未启用') : '接口不存在（wireguard 容器可能在重启）';
 
   /* data-label mirrors the <th> text: below 760px CSS turns each row into a card
      and prints the label, because the header row is no longer visible. */
+  const peak = ratePeak();
   const rows = state.peers.map((peer) => `
     <tr>
       <td data-label="名称">${escapeHtml(peer.name)}${peer.has_preshared_key ? '' : ' <span class="badge">无 PSK</span>'}</td>
@@ -87,8 +127,8 @@ function render() {
                 title="${peer.online ? '最近 3 分钟内有握手' : '最近 3 分钟没有握手'}">${peer.online ? '在线' : '离线'}</span>
           <span class="mono" title="最后一次握手距今多久">${age(peer.latest_handshake)}</span></span></td>
       <td class="mono" data-label="对端地址">${escapeHtml(peer.endpoint || '—')}</td>
-      <td class="num" data-label="下行">${rate(peer.tx_rate)}</td>
-      <td class="num" data-label="上行">${rate(peer.rx_rate)}</td>
+      <td class="num rate-down" data-label="下行" data-rate="tx">${rateMeter(peer.tx_rate, 'down', peak)}</td>
+      <td class="num rate-up" data-label="上行" data-rate="rx">${rateMeter(peer.rx_rate, 'up', peak)}</td>
       <td class="num mono" data-label="累计流量">↓${bytes(peer.tx)} ↑${bytes(peer.rx)}</td>
       <td class="actions-cell">
         <button class="tiny" data-edit="${escapeHtml(peer.name)}">编辑</button>
@@ -99,14 +139,7 @@ function render() {
 
   $('#peers-body').innerHTML = rows;
   $('#peers-empty').classList.toggle('hidden', state.peers.length > 0);
-
-  $('#runtime').innerHTML = `
-    <dt>接口名</dt><dd>${escapeHtml(rt.name)} ${rt.exists ? '' : '（不存在）'}</dd>
-    <dt>监听端口<small>ListenPort</small></dt><dd>${rt.listen_port || '—'}</dd>
-    <dt>隧道地址<small>Address</small></dt><dd>${(rt.addresses || []).join(', ') || '—'}</dd>
-    <dt>MTU<small>隧道内单个包的上限</small></dt><dd>${rt.mtu == null ? '—' : rt.mtu}</dd>
-    <dt>服务器公钥<small>客户端配置里的 PublicKey</small></dt><dd>${escapeHtml(rt.public_key || '—')}</dd>
-    <dt>配置文件</dt><dd>${escapeHtml(state.conf_path)}</dd>`;
+  $('#peer-count').textContent = state.peers.length ? `(${state.peers.length})` : '';
 
   renderBanner();
   renderTrafficTiles();

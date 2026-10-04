@@ -34,18 +34,23 @@
       <h1 id="iface">wg0</h1>
       <span class="iface-state" id="iface-state">读取中…</span>
     </div>
+    <!-- One readout strip, not a second "interface info" section repeating the
+         same five fields further down the page. -->
     <dl class="readouts">
       <div class="readout">
-        <dt>隧道地址</dt><dd id="iface-address">—</dd>
+        <dt title="它在隧道里的地址">隧道地址</dt><dd id="iface-address">—</dd>
       </div>
       <div class="readout">
-        <dt>监听端口</dt><dd id="iface-port">—</dd>
+        <dt title="ListenPort，客户端连过来的 UDP 端口">监听端口</dt><dd id="iface-port">—</dd>
       </div>
       <div class="readout">
-        <dt>MTU</dt><dd id="iface-mtu">—</dd>
+        <dt title="隧道内单个包的上限">MTU</dt><dd id="iface-mtu">—</dd>
       </div>
       <div class="readout wide">
-        <dt>服务器公钥</dt><dd id="iface-key">—</dd>
+        <dt title="wireguard 容器里的 wg0.conf 路径">配置文件</dt><dd id="iface-conf">—</dd>
+      </div>
+      <div class="readout wide">
+        <dt title="客户端配置里的 PublicKey">服务器公钥</dt><dd id="iface-key">—</dd>
       </div>
     </dl>
   </section>
@@ -109,11 +114,6 @@
     </div>
 
     <p class="legend" id="traffic-legend"></p>
-  </section>
-
-  <section class="iface-info">
-    <div class="section-head"><h2>接口信息</h2></div>
-    <dl class="kv" id="runtime"></dl>
   </section>
 
 </main>
