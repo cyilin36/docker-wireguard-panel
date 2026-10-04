@@ -3,7 +3,7 @@
    Two layers, in this order:
 
    1. tokens  — one block per theme. `:root` holds the day palette (the default),
-               `[data-theme="dark"]` the night one, and a prefers-color-scheme
+                `[data-theme="dark"]` the night one, and a prefers-color-scheme
                 fallback covers the no-JavaScript case so `auto` still follows the
                 system. Every colour used below comes from here, and
                 tests/test_theme.py checks the pairs that carry text for WCAG AA —
@@ -12,7 +12,13 @@
                 Hardcoding a colour down here breaks one of the two themes, so
                 don't: tests/test_theme.py fails the build if you do.
 
-   `data-theme` is written on <html> by theme-init.js before the first paint. */
+   `data-theme` is written on <html> by theme-init.js before the first paint.
+
+   Design language: "rack grey + petrol". The tunnel's identity is the first and
+   largest element, everything lives on one ruled surface instead of a stack of
+   identical cards, and every rate is a number plus a two-direction meter that
+   shares the waveform's colours (down = server -> client, up = client -> server).
+   Radii stay small on purpose: 6px on the one surface, 4px on controls. */
 
 /* --------------------------------------------------------------- tokens -- */
 :root {
@@ -117,33 +123,44 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Roboto, sans-serif;
-  padding: 24px clamp(16px, 4vw, 48px) 64px;
+  font: 14px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Roboto, sans-serif;
+  padding: 20px clamp(14px, 4vw, 40px) 56px;
   -webkit-text-size-adjust: 100%;
 }
 
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+/* Mono is a role, not a costume: it carries machine values only — interface
+   names, addresses, keys, rates, byte counts and chart ticks. Never labels or
+   headings, which stay in the proportional face. */
+.mono,
+.wordmark,
+#iface,
+.readout dd,
+.kv dd,
+.tile-value,
+.rate-value,
+.chart-axis,
+.chart-tip {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
 }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
-.iface { color: var(--muted); font-size: 13px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
-.dot.up { background: var(--accent); box-shadow: 0 0 0 3px var(--ok-tint); }
-.dot.down { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-tint); }
 
-.card {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px;
+/* ------------------------------------------------------------- top bar -- */
+.topbar,
+.console {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
 }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-h2 { font-size: 14px; margin: 0; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.wordmark { color: var(--muted); font-size: 14px; font-weight: 600; letter-spacing: .02em; }
 
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 button, .ghost, .primary {
-  font: inherit; cursor: pointer; border-radius: var(--radius-sm); padding: 7px 13px;
+  font: inherit; cursor: pointer; border-radius: var(--radius-sm); padding: 6px 12px;
   border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
   text-decoration: none; display: inline-block;
   transition: border-color .12s ease, background-color .12s ease, color .12s ease;
@@ -155,52 +172,95 @@ button.primary:hover { filter: brightness(1.08); }
 button.primary:active { filter: brightness(.94); }
 button.danger { color: var(--danger); }
 button.danger:hover { border-color: var(--danger-line); background: var(--danger-tint); }
-button.tiny { padding: 4px 9px; font-size: 12px; }
+button.tiny { padding: 3px 9px; font-size: 12px; }
 button[disabled] { opacity: .55; cursor: not-allowed; }
 button[disabled]:hover { border-color: var(--line); background: var(--panel-2); }
 .hidden { display: none !important; }
 
 :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-/* The pill clips a ring drawn outside it, so its segments get an inset one — and
-   because the pressed segment is filled with --accent-2, that ring has to be the
-   opposite colour or focus on the active theme would be invisible. */
-.theme-switch button:focus-visible {
-  outline: 2px solid var(--on-accent); outline-offset: -2px;
-  box-shadow: 0 0 0 2px var(--accent-2);
-}
 
 /* Three-state theme picker: auto / day / night. The active segment is marked by
    aria-pressed (theme.js) and matched here, so there is one source of truth. */
 .theme-switch {
-  display: inline-flex; align-items: center; gap: 2px;
+  display: inline-flex; align-items: stretch;
   background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: 999px; padding: 2px;
+  border-radius: var(--radius-sm);
 }
 .theme-switch button {
-  border: 1px solid transparent; background: transparent; color: var(--muted);
-  border-radius: 999px; padding: 4px 11px; font-size: 12px;
+  border: 0; background: transparent; color: var(--muted);
+  padding: 5px 11px; font-size: 12px; border-radius: 0;
 }
-.theme-switch button:hover { color: var(--text); background: transparent; border-color: transparent; }
+.theme-switch button:first-child { border-radius: calc(var(--radius-sm) - 1px) 0 0 calc(var(--radius-sm) - 1px); }
+.theme-switch button:last-child { border-radius: 0 calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0; }
+.theme-switch button + button { border-left: 1px solid var(--line); }
+.theme-switch button:hover { background: transparent; color: var(--text); border-color: var(--line); }
 .theme-switch button[aria-pressed="true"] {
   background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); font-weight: 600;
 }
 .theme-switch button[aria-pressed="true"]:hover { background: var(--accent-2); color: var(--on-accent); }
+/* An outdented ring would be clipped by the neighbouring segment, so the ring is
+   inset — and on the filled segment it has to flip to the opposite colour. */
+.theme-switch button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+.theme-switch button[aria-pressed="true"]:focus-visible { outline-color: var(--on-accent); }
 
+/* -------------------------------------------------------------- console -- */
+/* One surface. Sections are separated by a hairline, not by another rounded card
+   with the same shadow. */
+.console {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.console > section { padding: 18px 20px; border-top: 1px solid var(--line); }
+.console > section:first-child { border-top: 0; }
+.console > .banner { margin: 0 20px 16px; }
+
+.section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+/* Chinese has no case, so the old uppercase + wide tracking only made the line
+   look loose. Weight and size carry the hierarchy instead. */
+h2 { font-size: 15px; font-weight: 600; margin: 0; color: var(--text); }
+.count { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- identity -- */
+.identity { display: grid; gap: 16px; }
+.identity-head { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+h1#iface { font-size: clamp(22px, 3vw, 28px); font-weight: 600; margin: 0; letter-spacing: -.01em; }
+.iface-state { color: var(--muted); font-size: 13px; }
+
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.up { background: var(--accent); box-shadow: 0 0 0 3px var(--ok-tint); }
+.dot.down { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-tint); }
+
+.readouts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px 22px; margin: 0; padding-top: 14px; border-top: 1px solid var(--line);
+}
+.readout { min-width: 0; }
+.readout.wide { grid-column: span 2; }
+.readout dt { color: var(--muted); font-size: 12px; margin-bottom: 3px; }
+.readout dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.readout.wide dd { font-size: 12px; color: var(--muted); }
+
+/* --------------------------------------------------------------- ledger -- */
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; white-space: nowrap; }
 tbody tr { transition: background-color .12s ease; }
 tbody tr:hover { background: var(--row-hover); }
-tbody tr:last-child td { border-bottom: none; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.actions-cell { text-align: right; white-space: nowrap; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
-.empty { color: var(--muted); margin: 6px 0 0; }
-.legend { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; line-height: 1.7; }
-.legend b { color: var(--text); font-weight: 600; }
-.kv dt small { display: block; color: var(--faint); font-size: 11px; }
+.mono { font-size: 12px; color: var(--muted); }
 
-.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+.empty { color: var(--muted); margin: 6px 0 0; }
+.legend { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; line-height: 1.7; max-width: 68ch; }
+.legend b { color: var(--text); font-weight: 600; }
+
+.badge { display: inline-block; padding: 1px 8px; border-radius: 2px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
 .badge.online { color: var(--accent); border-color: var(--ok-line); background: var(--ok-tint); }
 .badge.offline { color: var(--muted); }
 /* Badge + handshake age travel together, so the narrow-screen layout can keep
@@ -208,7 +268,7 @@ td.actions-cell { text-align: right; white-space: nowrap; }
 .status { display: inline-flex; align-items: center; gap: 8px; }
 
 .banner {
-  border-radius: var(--radius); padding: 11px 14px; margin-bottom: 18px;
+  border-radius: var(--radius-sm); padding: 11px 14px;
   border: 1px solid var(--line); background: var(--panel-2); font-size: 13px;
 }
 .banner.warn { border-color: var(--warn-line); background: var(--warn-tint); }
@@ -216,16 +276,76 @@ td.actions-cell { text-align: right; white-space: nowrap; }
 .banner .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .banner ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
-.kv dt { color: var(--muted); }
-.kv dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+/* --------------------------------------------------------- rate meters -- */
+/* The one loud element. 下行 and 上行 meet at the column border: each track sits
+   flush against it and its fill grows outward, so two busy directions read as one
+   barbell. The number stays outside the meter and is the accessible value — the
+   meter itself is decorative and never the only signal. */
+.rate { display: flex; align-items: center; gap: 8px; width: 100%; }
+.rate.down { justify-content: flex-end; }
+.rate.up { justify-content: flex-start; }
+.meter {
+  flex: none; width: 46px; height: 5px; border-radius: 2px;
+  background: var(--line); overflow: hidden;
+}
+.meter i { display: block; height: 100%; border-radius: 2px; background: var(--chart-down); }
+.rate.down .meter i { margin-left: auto; }
+.rate.up .meter i { background: var(--chart-up); }
+/* Pull the two rate columns together so the meters actually abut the border
+   between them instead of floating in the cell padding. */
+th.rate-down, td.rate-down { padding-right: 2px; }
+th.rate-up, td.rate-up { padding-left: 2px; }
 
+/* ------------------------------------------------------------- traffic -- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 14px; }
+.tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
+.tile-label { display: block; color: var(--muted); font-size: 12px; }
+.tile-value { font-size: 18px; font-variant-numeric: tabular-nums; }
+.tile small { display: block; color: var(--faint); font-size: 11px; margin-top: 2px; }
+
+#traffic-scope, #traffic-range {
+  font: inherit; padding: 5px 9px; border-radius: var(--radius-sm); max-width: 44vw;
+  border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text);
+}
+#traffic-scope:focus, #traffic-range:focus {
+  outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus);
+}
+
+.chart-wrap { position: relative; margin: 0 0 10px; }
+#traffic-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-wrap .empty { padding: 46px 0; text-align: center; margin: 0; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-axis { fill: var(--muted); font-size: 11px; }
+.chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-line.down { stroke: var(--chart-down); }
+.chart-line.up { stroke: var(--chart-up); }
+.chart-cursor { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart-dot { stroke: var(--panel); stroke-width: 1.5; }
+.chart-dot.down { fill: var(--chart-down); }
+.chart-dot.up { fill: var(--chart-up); }
+.chart-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart-swatch.down { background: var(--chart-down); }
+.chart-swatch.up { background: var(--chart-up); }
+.chart-tip {
+  position: absolute; top: 0; transform: translate(-50%, 0); pointer-events: none; z-index: 2;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 6px 9px; font-size: 12px; line-height: 1.5; white-space: nowrap;
+}
+.warn-text { color: var(--danger-text); }
+
+/* ------------------------------------------------------- interface info -- */
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; }
+.kv dt { color: var(--muted); font-size: 13px; }
+.kv dt small { display: block; color: var(--faint); font-size: 11px; }
+.kv dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+
+/* -------------------------------------------------------------- dialogs -- */
 dialog {
-  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
   color: var(--text); padding: 20px; width: min(460px, 92vw);
 }
 dialog::backdrop { background: var(--overlay); }
-dialog h3 { margin: 0 0 14px; font-size: 16px; }
+dialog h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
 dialog label { display: block; margin-bottom: 11px; color: var(--muted); font-size: 13px; }
 dialog input {
   display: block; width: 100%; margin-top: 5px; padding: 8px 10px;
@@ -255,10 +375,15 @@ body.login-body {
 }
 .login-card {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 26px 24px; width: min(360px, 100%);
+  padding: 0; width: min(380px, 100%); overflow: hidden;
 }
-.login-card h1 { font-size: 20px; margin: 0 0 4px; }
-.login-sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+.login-head { padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+.login-head h1 {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 19px; margin: 0 0 4px; letter-spacing: .01em;
+}
+.login-sub { color: var(--muted); font-size: 13px; margin: 0; }
+.login-body-fields { padding: 18px 22px 20px; }
 .login-card label { display: block; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
 .login-card input {
   display: block; width: 100%; margin-top: 5px; padding: 9px 11px;
@@ -273,58 +398,23 @@ body.login-body {
   padding: 8px 11px; font-size: 13px; margin: 0 0 12px;
 }
 
-/* ----------------------------------------------------------------- traffic --
-   The tiles carry both halves of 总流量统计: the lifetime byte counters and the
-   live rate. The chart below them is rate-only, two lines in one plot. */
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 14px; }
-.tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
-.tile-label { display: block; color: var(--muted); font-size: 12px; }
-.tile-value { font-size: 18px; font-variant-numeric: tabular-nums; }
-.tile small { display: block; color: var(--faint); font-size: 11px; margin-top: 2px; }
-
-#traffic-scope, #traffic-range {
-  font: inherit; padding: 6px 10px; border-radius: var(--radius-sm); max-width: 44vw;
-  border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text);
-}
-#traffic-scope:focus, #traffic-range:focus {
-  outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--focus);
-}
-
-.chart-wrap { position: relative; margin: 0 0 10px; }
-#traffic-chart { display: block; width: 100%; height: auto; overflow: visible; }
-.chart-wrap .empty { padding: 46px 0; text-align: center; margin: 0; }
-.chart-grid { stroke: var(--line); stroke-width: 1; }
-.chart-axis { fill: var(--muted); font-size: 11px; }
-.chart-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
-.chart-line.down { stroke: var(--chart-down); }
-.chart-line.up { stroke: var(--chart-up); }
-.chart-cursor { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
-.chart-dot { stroke: var(--panel); stroke-width: 1.5; }
-.chart-dot.down { fill: var(--chart-down); }
-.chart-dot.up { fill: var(--chart-up); }
-.chart-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-.chart-swatch.down { background: var(--chart-down); }
-.chart-swatch.up { background: var(--chart-up); }
-.chart-tip {
-  position: absolute; top: 0; transform: translate(-50%, 0); pointer-events: none; z-index: 2;
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
-  padding: 6px 9px; font-size: 12px; line-height: 1.5; white-space: nowrap;
-  box-shadow: 0 4px 14px var(--overlay);
-}
-.warn-text { color: var(--danger-text); }
-
 /* --------------------------------------------------------------- narrow UI --
    Eight columns do not fit a phone. Below 760px each peer row becomes a small
    card and every <td> prints its own label from data-label, which app.js renders
    from the same names as the header. The thead is clipped rather than deleted so
    it stays reachable, though display:block below already costs the table its
-   role in every engine that matters — the labels are what carry the meaning. */
+   role in every engine that matters — the labels are what carry the meaning.
+   The rate meters are dropped here: at this width the numbers alone are clearer,
+   and the decorative bar would just crowd the card. */
 @media (max-width: 760px) {
-  body { padding: 16px 12px 48px; }
-  header { flex-direction: column; align-items: stretch; gap: 12px; }
-  .brand { flex-wrap: wrap; }
-  .actions { justify-content: flex-end; }
-  .card { padding: 14px; }
+  body { padding: 14px 12px 40px; }
+  .topbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .topbar .actions { justify-content: flex-end; }
+  .readouts { grid-template-columns: 1fr 1fr; }
+  .readout.wide { grid-column: span 2; }
+  .console > section { padding: 15px 14px; }
+  .console > .banner { margin: 0 14px 14px; }
+  .meter { display: none; }
   table, tbody, tr, td { display: block; width: 100%; }
   thead {
     position: absolute; width: 1px; height: 1px; overflow: hidden;
@@ -338,11 +428,13 @@ body.login-body {
   tbody tr:hover { background: transparent; }
   td {
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-    border-bottom: none; padding: 3px 0; text-align: left;
+    border-bottom: 0; padding: 3px 0; text-align: left;
   }
+  td.rate-down, td.rate-up { padding: 3px 0; }
+  td .rate { width: auto; justify-content: flex-end; }
   td::before {
     content: attr(data-label); flex: none;
-    color: var(--muted); font-size: 12px; letter-spacing: .04em;
+    color: var(--muted); font-size: 12px;
   }
   td:empty { display: none; }
   td.num { text-align: right; }
@@ -353,7 +445,8 @@ body.login-body {
   td.actions-cell::before { content: none; }
   .tiles { grid-template-columns: 1fr 1fr; }
   #traffic-scope, #traffic-range { max-width: 100%; }
-  #traffic-card .card-head .actions { justify-content: flex-start; }}
+  .flow .section-head .actions { justify-content: flex-start; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }

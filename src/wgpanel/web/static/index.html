@@ -10,12 +10,8 @@
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <span class="dot" id="status-dot"></span>
-    <h1>wgpanel</h1>
-    <span class="iface" id="iface"></span>
-  </div>
+<header class="topbar">
+  <span class="wordmark">wgpanel</span>
   <div class="actions">
     <div class="theme-switch" id="theme-switch" role="group" aria-label="主题">
       <button type="button" data-theme-choice="auto" aria-pressed="false" title="跟随系统设置">自动</button>
@@ -28,71 +24,99 @@
   </div>
 </header>
 
-<div id="banner" class="banner hidden"></div>
+<main class="console">
 
-<section class="card">
-  <div class="card-head">
-    <h2>客户端（Peer）</h2>
-    <div class="actions">
-      <button id="btn-apply" class="ghost hidden">应用改动</button>
-      <button id="btn-add" class="primary">添加客户端</button>
+  <!-- The tunnel is the subject, so its identity is the first and largest thing
+       on the page rather than a card at the bottom. -->
+  <section class="identity">
+    <div class="identity-head">
+      <span class="dot" id="status-dot"></span>
+      <h1 id="iface">wg0</h1>
+      <span class="iface-state" id="iface-state">读取中…</span>
     </div>
-  </div>
+    <dl class="readouts">
+      <div class="readout">
+        <dt>隧道地址</dt><dd id="iface-address">—</dd>
+      </div>
+      <div class="readout">
+        <dt>监听端口</dt><dd id="iface-port">—</dd>
+      </div>
+      <div class="readout">
+        <dt>MTU</dt><dd id="iface-mtu">—</dd>
+      </div>
+      <div class="readout wide">
+        <dt>服务器公钥</dt><dd id="iface-key">—</dd>
+      </div>
+    </dl>
+  </section>
 
-  <p class="legend">
-    每个「客户端」就是一台要连进来的设备。
-    <b>下行</b>＝服务器发给它的速度，<b>上行</b>＝它发给服务器的速度，<b>在线</b>＝最近 3 分钟内有过握手。
-  </p>
+  <div id="banner" class="banner hidden"></div>
 
-  <table id="peers">
-    <thead>
-      <tr>
-        <th title="客户端名字，存在配置文件的 # 注释里">名称</th>
-        <th title="它在隧道里的地址，由面板自动分配">隧道地址</th>
-        <th title="最近 3 分钟内有握手 = 在线；右侧是最后一次握手距今多久">状态</th>
-        <th title="对方的公网地址:端口，没连上时为空">对端地址</th>
-        <th class="num" title="服务器 → 客户端，当前速度">下行</th>
-        <th class="num" title="客户端 → 服务器，当前速度">上行</th>
-        <th class="num" title="建连以来的总流量：↓ 服务器发出，↑ 服务器收到">累计流量</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="peers-body"></tbody>
-  </table>
-  <p class="empty" id="peers-empty">还没有客户端。点右上角「添加客户端」。</p>
-</section>
-
-<section class="card" id="traffic-card">
-  <div class="card-head">
-    <h2>流量</h2>
-    <div class="actions">
-      <select id="traffic-scope" aria-label="统计对象" title="统计全部客户端，还是某一个客户端"></select>
-      <select id="traffic-range" aria-label="时间范围" title="波形的时间范围；1 分钟档每秒刷新">
-        <option value="60">1 分钟</option>
-        <option value="3600" selected>1 小时</option>
-        <option value="43200">12 小时</option>
-        <option value="86400">24 小时</option>
-        <option value="604800">7 天</option>
-        <option value="1296000">15 天</option>
-      </select>
+  <section class="ledger">
+    <div class="section-head">
+      <h2>客户端 <span class="count" id="peer-count"></span></h2>
+      <div class="actions">
+        <button id="btn-apply" class="ghost hidden">应用改动</button>
+        <button id="btn-add" class="primary">添加客户端</button>
+      </div>
     </div>
-  </div>
 
-  <div class="tiles" id="traffic-tiles"></div>
+    <p class="legend">
+      每个「客户端」就是一台要连进来的设备。
+      <b>下行</b>＝服务器发给它的速度，<b>上行</b>＝它发给服务器的速度，<b>在线</b>＝最近 3 分钟内有过握手。
+    </p>
 
-  <div class="chart-wrap">
-    <svg id="traffic-chart" role="img" aria-label="上下行速率波形图"></svg>
-    <p class="empty hidden" id="traffic-empty">正在采集…</p>
-    <div class="chart-tip hidden" id="traffic-tip"></div>
-  </div>
+    <table id="peers">
+      <thead>
+        <tr>
+          <th title="客户端名字，存在配置文件的 # 注释里">名称</th>
+          <th title="它在隧道里的地址，由面板自动分配">隧道地址</th>
+          <th title="最近 3 分钟内有握手 = 在线；右侧是最后一次握手距今多久">状态</th>
+          <th title="对方的公网地址:端口，没连上时为空">对端地址</th>
+          <th class="num" title="服务器 → 客户端，当前速度">下行</th>
+          <th class="num" title="客户端 → 服务器，当前速度">上行</th>
+          <th class="num" title="建连以来的总流量：↓ 服务器发出，↑ 服务器收到">累计流量</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="peers-body"></tbody>
+    </table>
+    <p class="empty" id="peers-empty">还没有客户端。点右上角「添加客户端」。</p>
+  </section>
 
-  <p class="legend" id="traffic-legend"></p>
-</section>
+  <section class="flow" id="traffic-card">
+    <div class="section-head">
+      <h2>流量</h2>
+      <div class="actions">
+        <select id="traffic-scope" aria-label="统计对象" title="统计全部客户端，还是某一个客户端"></select>
+        <select id="traffic-range" aria-label="时间范围" title="波形的时间范围；1 分钟档每秒刷新">
+          <option value="60">1 分钟</option>
+          <option value="3600" selected>1 小时</option>
+          <option value="43200">12 小时</option>
+          <option value="86400">24 小时</option>
+          <option value="604800">7 天</option>
+          <option value="1296000">15 天</option>
+        </select>
+      </div>
+    </div>
 
-<section class="card" id="runtime-card">
-  <div class="card-head"><h2>接口信息</h2></div>
-  <dl class="kv" id="runtime"></dl>
-</section>
+    <div class="tiles" id="traffic-tiles"></div>
+
+    <div class="chart-wrap">
+      <svg id="traffic-chart" role="img" aria-label="上下行速率波形图"></svg>
+      <p class="empty hidden" id="traffic-empty">正在采集…</p>
+      <div class="chart-tip hidden" id="traffic-tip"></div>
+    </div>
+
+    <p class="legend" id="traffic-legend"></p>
+  </section>
+
+  <section class="iface-info">
+    <div class="section-head"><h2>接口信息</h2></div>
+    <dl class="kv" id="runtime"></dl>
+  </section>
+
+</main>
 
 <!-- 添加客户端 -->
 <dialog id="dlg-add">
