@@ -45,9 +45,13 @@ config/
 *.log
 .wgpanel/
 
-# Scratch that must never be published: local overrides, backups, image dumps
+# Scratch that must never be published: local overrides, backups, image dumps.
+# docker-compose.yml belongs here because the README tells you to copy
+# docker-compose.example.yml to that name and put a real PANEL_PASSWORD in it;
+# only the .example.yml is ever shipped.
 compose.override.yaml
 docker-compose.override.yml
+docker-compose.yml
 *.bak
 *.orig
 *.tar
