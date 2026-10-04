@@ -58,6 +58,10 @@ scratch/
 tmp/
 *.tmp
 
+# Agent skills installed for this working copy only, never published
+# (same convention as tests/, docs/ and AGENTS.md)
+.agents/skills/
+
 # Editors and operating systems
 .idea/
 .vscode/
