@@ -25,7 +25,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .. import files
 from ..apply import apply
-from ..auth import COOKIE_NAME, AuthConfig, AuthGuard
+from ..auth import COOKIE_NAME, AuthConfig, AuthGuard, token_from_headers
 from ..differ import Target, plan_change
 from ..errors import RiskGateError, ValidationError, WgPanelError
 from ..peers import UNSET, KeySource, PeerManager
@@ -66,10 +66,16 @@ class AuthMiddleware:
         path = scope.get("path", "")
         if not self.guard.is_public(path):
             request = Request(scope)
-            if self.guard.user_for(request.cookies.get(COOKIE_NAME)) is None:
+            if not self._authorized(request, path):
                 await self._refuse(scope, receive, send, path)
                 return
         await self.app(scope, receive, send)
+
+    def _authorized(self, request: Request, path: str) -> bool:
+        """A session cookie always works; a read-only token works where allowed."""
+        if self.guard.user_for(request.cookies.get(COOKIE_NAME)) is not None:
+            return True
+        return self.guard.token_allows(request.method, path, token_from_headers(request.headers))
 
     async def _refuse(self, scope: Scope, receive: Receive, send: Send, path: str) -> None:
         if path.startswith("/api/"):

@@ -8,6 +8,12 @@ sets on the panel container::
 
     PANEL_USER      account name (default: admin)
     PANEL_PASSWORD  password
+    PANEL_API_TOKEN read-only token for other programs (optional)
+
+``PANEL_API_TOKEN`` is for other programs that poll the panel: it is accepted as
+``Authorization: Bearer`` or ``X-API-Token`` on the handful of read-only
+endpoints in :data:`TOKEN_READ_PATHS`, never on a write and never on the
+endpoints that hand out a client's private key.
 
 Sessions are held in memory. A restart therefore logs everybody out, which is
 also what makes a password change take effect: the panel is reconfigured
@@ -39,14 +45,45 @@ LOCKOUT_SECONDS = 300.0
 PUBLIC_PATHS = frozenset({"/login", "/api/login", "/api/logout", "/api/health", "/favicon.ico"})
 PUBLIC_PREFIXES = ("/static/",)
 
+# The only endpoints a read-only API token may reach, and the only methods it
+# may use. Deliberately an allowlist rather than "any GET": `GET
+# /api/peers/{name}/conf` and the QR images are ordinary GETs, but either one
+# hands out a client's *private* key, and a dashboard token is exactly the kind
+# of credential that ends up in a config file someone else can read.
+TOKEN_READ_PATHS = frozenset(
+    {"/api/state", "/api/plan", "/api/traffic", "/api/settings", "/api/peers"}
+)
+TOKEN_METHODS = frozenset({"GET", "HEAD"})
+
+# A token shorter than this is a guess away from being brute-forced, and the
+# panel speaks plain HTTP, so the token is all that stands between the internet
+# and /api/state. Refusing a short one at startup beats serving it quietly.
+MIN_TOKEN_LENGTH = 16
+
+
+def token_from_headers(headers: Mapping[str, str]) -> str:
+    """The presented API token, from either accepted header, else ``""``.
+
+    ``Authorization: Bearer <token>`` is the standard shape and what most
+    clients already know how to send; ``X-API-Token`` exists because a plain
+    custom header is easier to configure in some of them. Header names arrive
+    lowercased from Starlette, but not from a plain dict.
+    """
+    lowered = {name.lower(): value for name, value in headers.items()}
+    scheme, _, value = lowered.get("authorization", "").partition(" ")
+    if scheme.lower() == "bearer" and value.strip():
+        return value.strip()
+    return lowered.get("x-api-token", "").strip()
+
 
 @dataclass(frozen=True)
 class AuthConfig:
-    """Who may log in."""
+    """Who may log in, and who may read."""
 
     user: str = "admin"
     password: str = ""
     session_ttl: int = DEFAULT_SESSION_TTL
+    api_token: str = ""
 
     @classmethod
     def from_environ(
@@ -66,7 +103,13 @@ class AuthConfig:
                 "PANEL_PASSWORD is not set, refusing to serve an unprotected panel; add "
                 "`- PANEL_PASSWORD=...` to the wgpanel service in docker-compose.yml"
             )
-        return cls(user=name, password=secret)
+        token = (environ.get("PANEL_API_TOKEN") or "").strip()
+        if token and len(token) < MIN_TOKEN_LENGTH:
+            raise WgPanelError(
+                f"PANEL_API_TOKEN is {len(token)} characters, which is too short to expose "
+                f"read access; use at least {MIN_TOKEN_LENGTH} random characters, or unset it"
+            )
+        return cls(user=name, password=secret, api_token=token)
 
     def verify(self, user: str, password: str) -> bool:
         """Constant-time check of both fields.
@@ -179,6 +222,19 @@ class AuthGuard:
 
     def user_for(self, token: str | None) -> str | None:
         return self.sessions.get(token)
+
+    def token_allows(self, method: str, path: str, presented: str) -> bool:
+        """Whether a read-only API token may serve this request.
+
+        The path and method are checked before the secret so that an
+        unauthenticated write is refused for the right reason: the token cannot
+        write at all, whatever it says.
+        """
+        if method not in TOKEN_METHODS or path not in TOKEN_READ_PATHS:
+            return False
+        if not self.config.api_token or not presented:
+            return False
+        return hmac.compare_digest(presented, self.config.api_token)
 
     def attempt(self, user: str, password: str, client: str) -> str | None:
         """Return a fresh session token, or ``None`` when the login is refused."""

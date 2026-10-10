@@ -246,9 +246,10 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         traffic_interval=interval,
     )
     sampling = f"traffic sampling every {interval:g}s" if interval else "traffic sampling off"
+    reading = "read-only API token enabled" if auth.api_token else "read-only API token off"
     print(
         f"wgpanel listening on http://{args.host}:{args.port}  "
-        f"(interface {target.interface}, user {auth.user}, {sampling})"
+        f"(interface {target.interface}, user {auth.user}, {sampling}, {reading})"
     )
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning", access_log=False)
     return EXIT_OK

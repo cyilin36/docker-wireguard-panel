@@ -43,7 +43,7 @@ services:
   wgpanel:
     # Published image. Building it yourself works too: comment this out and use
     # `build: .` plus a tag of your own.
-    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.0-rc1
+    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.1
     container_name: wgpanel
     # Sharing the wireguard network namespace is what lets `wg syncconf`,
     # `wg show` and tcpdump run locally, with no docker socket.
@@ -63,6 +63,9 @@ services:
       # Web UI login. Change it before exposing the port.
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
+      # Optional: lets other programs read the read-only API without a login
+      # session. At least 16 characters; read-only endpoints only.
+      # PANEL_API_TOKEN: change-me-too-0123456789
     depends_on:
       - wireguard
     restart: unless-stopped

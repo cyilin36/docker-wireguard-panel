@@ -46,7 +46,7 @@ services:
   wgpanel:
     # Published image. Building it yourself works too: comment this out and use
     # `build: .` plus a tag of your own.
-    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.0-rc1
+    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.1
     container_name: wgpanel
     # Sharing the wireguard network namespace is what lets `wg syncconf`,
     # `wg show` and tcpdump run locally, with no docker socket.
@@ -66,6 +66,9 @@ services:
       # Web UI login. Change it before exposing the port.
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
+      # Optional: lets other programs read the read-only API without a login
+      # session. At least 16 characters; read-only endpoints only.
+      # PANEL_API_TOKEN: change-me-too-0123456789
     depends_on:
       - wireguard
     restart: unless-stopped
@@ -93,6 +96,28 @@ internet.
 
 Traffic sampling runs once a second by default; set `PANEL_TRAFFIC_INTERVAL` (seconds, `0` turns it
 off) in the `wgpanel` service to change that. History lives under `WG_STATE_DIR/traffic/`.
+
+## Reading it from other programs (read-only API)
+
+Every endpoint needs a login by default. Set `PANEL_API_TOKEN` (at least 16 characters) on the
+`wgpanel` service and other programs can read these without a session, with either
+`Authorization: Bearer <token>` or `X-API-Token: <token>` — read-only, never write:
+
+| Endpoint | What you get |
+| --- | --- |
+| `GET /api/state` | Interface state, peers (live handshake and rates), pending changes |
+| `GET /api/plan` | What the current config would do |
+| `GET /api/traffic` | Traffic history (`?window=` seconds) |
+| `GET /api/settings` | Settings used to export client configs |
+| `GET /api/peers` | Peer list |
+
+`GET /api/peers/{name}/conf` and `qr.svg` / `qr.png` look read-only too, but they hand out a
+client's **private key**, so they stay session-only and always answer 401 to a token. Same for
+every write (`POST` / `PATCH` / `DELETE` / `PUT`). `GET /api/health` needs no credential at all:
+it returns 200 whenever the panel process is alive.
+
+`/api/state` reads the kernel and recomputes the pending plan on every request, so poll it every
+10 seconds or so rather than in a tight loop.
 
 ## CLI
 

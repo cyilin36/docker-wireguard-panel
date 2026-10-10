@@ -45,7 +45,7 @@ services:
   wgpanel:
     # Published image. Building it yourself works too: comment this out and use
     # `build: .` plus a tag of your own.
-    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.0-rc1
+    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.1
     container_name: wgpanel
     # Sharing the wireguard network namespace is what lets `wg syncconf`,
     # `wg show` and tcpdump run locally, with no docker socket.
@@ -65,6 +65,9 @@ services:
       # Web UI login. Change it before exposing the port.
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
+      # Optional: lets other programs read the read-only API without a login
+      # session. At least 16 characters; read-only endpoints only.
+      # PANEL_API_TOKEN: change-me-too-0123456789
     depends_on:
       - wireguard
     restart: unless-stopped
@@ -91,6 +94,26 @@ services:
 
 流量采样默认每秒一次；要改间隔就在 `wgpanel` 服务里设 `PANEL_TRAFFIC_INTERVAL`（秒，`0` 表示关闭），
 历史文件在 `WG_STATE_DIR/traffic/`。
+
+## 给其他程序读取（只读 API）
+
+面板的接口默认都要登录。在 `wgpanel` 服务里设一个 `PANEL_API_TOKEN`（至少 16 个字符）之后，
+其他程序带上 `Authorization: Bearer <token>` 或 `X-API-Token: <token>` 就能免登录读取下面这几个
+接口——只能读，不能写：
+
+| 接口 | 内容 |
+| --- | --- |
+| `GET /api/state` | 接口状态、peer 列表（含实时握手与速率）、待生效改动 |
+| `GET /api/plan` | 当前配置会执行什么计划 |
+| `GET /api/traffic` | 流量历史（`?window=` 秒） |
+| `GET /api/settings` | 客户端导出用的设置 |
+| `GET /api/peers` | peer 列表 |
+
+`GET /api/peers/{name}/conf` 和 `qr.svg` / `qr.png` 看着也是只读，但它们会把客户端的**私钥**
+交出去，所以只认登录会话，token 一律 401；所有写接口（`POST` / `PATCH` / `DELETE` / `PUT`）同理。
+`GET /api/health` 本来就不需要任何凭据，面板进程活着就返回 200。
+
+`/api/state` 每请求都会读一遍内核状态并算一次待生效计划，轮询别太频繁，10 秒量级就够。
 
 ## 命令行
 
