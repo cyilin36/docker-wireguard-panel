@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Hot-reload a lscr.io/linuxserver/wireguard configuration without "
                     "restarting the container.",
     )
-    parser.add_argument("--version", action="version", version="wgpanel 0.1.0")
+    parser.add_argument("--version", action="version", version="wgpanel 0.1.1")
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_common(target: argparse.ArgumentParser) -> None:

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wgpanel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Hot-reload engine for lscr.io/linuxserver/wireguard configuration files"
 readme = "README.md"
 requires-python = ">=3.11"

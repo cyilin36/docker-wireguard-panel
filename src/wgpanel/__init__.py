@@ -35,7 +35,7 @@ from .runner import ExecResult, LocalRunner, Runner, redact_text
 from .runtime import InterfaceRuntime, PeerRuntime, list_interfaces, read_interface, snapshot
 from .validate import has_errors, validate
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "SYNC_SCRIPT",
