@@ -45,7 +45,7 @@ services:
   wgpanel:
     # Published image. Building it yourself works too: comment this out and use
     # `build: .` plus a tag of your own.
-    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.1
+    image: ghcr.io/cyilin36/docker-wireguard-panel:0.1.2
     container_name: wgpanel
     # Sharing the wireguard network namespace is what lets `wg syncconf`,
     # `wg show` and tcpdump run locally, with no docker socket.
