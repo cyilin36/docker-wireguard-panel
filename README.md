@@ -67,8 +67,8 @@ services:
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
       # Optional: lets other programs read the read-only API without a login
-      # session. At least 16 characters; read-only endpoints only.
-      # PANEL_API_TOKEN: change-me-too-0123456789
+      # session. Any value; leave it out and the feature stays off.
+      # PANEL_API_TOKEN: change-me-too
     depends_on:
       - wireguard
     restart: unless-stopped
@@ -99,9 +99,10 @@ off) in the `wgpanel` service to change that. History lives under `WG_STATE_DIR/
 
 ## Reading it from other programs (read-only API)
 
-Every endpoint needs a login by default. Set `PANEL_API_TOKEN` (at least 16 characters) on the
-`wgpanel` service and other programs can read these without a session, with either
-`Authorization: Bearer <token>` or `X-API-Token: <token>` — read-only, never write:
+Every endpoint needs a login by default. Set `PANEL_API_TOKEN` on the `wgpanel` service (any
+value) and other programs can read these without a session, with either
+`Authorization: Bearer <token>` or `X-API-Token: <token>` — read-only, never write. Leave it
+unset and this access stays off; the panel itself works exactly as before:
 
 | Endpoint | What you get |
 | --- | --- |

@@ -66,8 +66,8 @@ services:
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
       # Optional: lets other programs read the read-only API without a login
-      # session. At least 16 characters; read-only endpoints only.
-      # PANEL_API_TOKEN: change-me-too-0123456789
+      # session. Any value; leave it out and the feature stays off.
+      # PANEL_API_TOKEN: change-me-too
     depends_on:
       - wireguard
     restart: unless-stopped
@@ -97,9 +97,9 @@ services:
 
 ## 给其他程序读取（只读 API）
 
-面板的接口默认都要登录。在 `wgpanel` 服务里设一个 `PANEL_API_TOKEN`（至少 16 个字符）之后，
+面板的接口默认都要登录。在 `wgpanel` 服务里设一个 `PANEL_API_TOKEN`（任何值都行）之后，
 其他程序带上 `Authorization: Bearer <token>` 或 `X-API-Token: <token>` 就能免登录读取下面这几个
-接口——只能读，不能写：
+接口——只能读，不能写。不设就是关掉这个功能，面板本身照旧：
 
 | 接口 | 内容 |
 | --- | --- |

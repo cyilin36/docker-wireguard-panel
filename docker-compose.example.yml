@@ -64,8 +64,8 @@ services:
       PANEL_USER: admin
       PANEL_PASSWORD: change-me
       # Optional: lets other programs read the read-only API without a login
-      # session. At least 16 characters; read-only endpoints only.
-      # PANEL_API_TOKEN: change-me-too-0123456789
+      # session. Any value; leave it out and the feature stays off.
+      # PANEL_API_TOKEN: change-me-too
     depends_on:
       - wireguard
     restart: unless-stopped
