@@ -95,25 +95,25 @@ services:
 流量采样默认每秒一次；要改间隔就在 `wgpanel` 服务里设 `PANEL_TRAFFIC_INTERVAL`（秒，`0` 表示关闭），
 历史文件在 `WG_STATE_DIR/traffic/`。
 
-## 给其他程序读取（只读 API）
+## 只读 API
 
-面板的接口默认都要登录。在 `wgpanel` 服务里设一个 `PANEL_API_TOKEN`（任何值都行）之后，
-其他程序带上 `Authorization: Bearer <token>` 或 `X-API-Token: <token>` 就能免登录读取下面这几个
-接口——只能读，不能写。不设就是关掉这个功能，面板本身照旧：
+给面板、监控脚本之类的外部程序读状态用。在 `wgpanel` 服务里设 `PANEL_API_TOKEN`，请求带上
+`X-API-Token: <token>`（或 `Authorization: Bearer <token>`）即可，不用登录：
 
 | 接口 | 内容 |
 | --- | --- |
-| `GET /api/state` | 接口状态、peer 列表（含实时握手与速率）、待生效改动 |
-| `GET /api/plan` | 当前配置会执行什么计划 |
-| `GET /api/traffic` | 流量历史（`?window=` 秒） |
-| `GET /api/settings` | 客户端导出用的设置 |
+| `GET /api/state` | 接口状态、peer 列表、实时速率、待生效改动 |
 | `GET /api/peers` | peer 列表 |
+| `GET /api/traffic` | 流量历史，`?window=` 是秒数 |
+| `GET /api/plan` | 当前配置待执行的计划 |
+| `GET /api/settings` | 导出客户端配置用的设置 |
 
-`GET /api/peers/{name}/conf` 和 `qr.svg` / `qr.png` 看着也是只读，但它们会把客户端的**私钥**
-交出去，所以只认登录会话，token 一律 401；所有写接口（`POST` / `PATCH` / `DELETE` / `PUT`）同理。
-`GET /api/health` 本来就不需要任何凭据，面板进程活着就返回 200。
+```sh
+curl -H "X-API-Token: $PANEL_API_TOKEN" http://your-host:47710/api/state
+```
 
-`/api/state` 每请求都会读一遍内核状态并算一次待生效计划，轮询别太频繁，10 秒量级就够。
+只能读：写接口，以及会输出客户端私钥的 `/api/peers/<名字>/conf`、`qr.svg`、`qr.png`，仍然要登录。
+不设 `PANEL_API_TOKEN` 就不开启这个功能，面板其它行为完全不变；`GET /api/health` 一直不需要凭据。
 
 ## 命令行
 

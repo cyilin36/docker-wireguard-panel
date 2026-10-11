@@ -97,25 +97,27 @@ internet.
 Traffic sampling runs once a second by default; set `PANEL_TRAFFIC_INTERVAL` (seconds, `0` turns it
 off) in the `wgpanel` service to change that. History lives under `WG_STATE_DIR/traffic/`.
 
-## Reading it from other programs (read-only API)
+## Read-only API
 
-Every endpoint needs a login by default. Set `PANEL_API_TOKEN` on the `wgpanel` service (any
-value) and other programs can read these without a session, with either
-`Authorization: Bearer <token>` or `X-API-Token: <token>` — read-only, never write. Leave it
-unset and this access stays off; the panel itself works exactly as before:
+For dashboards, monitors and scripts that want the panel's state without a login. Set
+`PANEL_API_TOKEN` on the `wgpanel` service and send it as `X-API-Token: <token>` (or
+`Authorization: Bearer <token>`):
 
-| Endpoint | What you get |
+| Endpoint | Returns |
 | --- | --- |
-| `GET /api/state` | Interface state, peers (live handshake and rates), pending changes |
-| `GET /api/plan` | What the current config would do |
-| `GET /api/traffic` | Traffic history (`?window=` seconds) |
-| `GET /api/settings` | Settings used to export client configs |
+| `GET /api/state` | Interface state, peers, live rates, pending changes |
 | `GET /api/peers` | Peer list |
+| `GET /api/traffic` | Traffic history, `?window=` in seconds |
+| `GET /api/plan` | What the current config would apply |
+| `GET /api/settings` | Settings used to export client configs |
 
-`GET /api/peers/{name}/conf` and `qr.svg` / `qr.png` look read-only too, but they hand out a
-client's **private key**, so they stay session-only and always answer 401 to a token. Same for
-every write (`POST` / `PATCH` / `DELETE` / `PUT`). `GET /api/health` needs no credential at all:
-it returns 200 whenever the panel process is alive.
+```sh
+curl -H "X-API-Token: $PANEL_API_TOKEN" http://your-host:47710/api/state
+```
+
+Read-only: writes, and the `/api/peers/<name>/conf`, `qr.svg` and `qr.png` endpoints that hand out a
+client's private key, still need a login. Leave `PANEL_API_TOKEN` unset and the feature stays off —
+nothing else about the panel changes. `GET /api/health` never needs a credential.
 
 `/api/state` reads the kernel and recomputes the pending plan on every request, so poll it every
 10 seconds or so rather than in a tight loop.
