@@ -55,10 +55,20 @@ TOKEN_READ_PATHS = frozenset(
 )
 TOKEN_METHODS = frozenset({"GET", "HEAD"})
 
-# A token shorter than this is a guess away from being brute-forced, and the
-# panel speaks plain HTTP, so the token is all that stands between the internet
-# and /api/state. Refusing a short one at startup beats serving it quietly.
-MIN_TOKEN_LENGTH = 16
+def _wire_bytes(value: str) -> bytes:
+    """The bytes a token is compared as.
+
+    ASGI hands header values over latin-1 decoded, which is byte for byte what
+    the client sent, while the configured token is a UTF-8 str from the
+    environment: putting each side back into bytes is what lets a non-ASCII
+    token match at all. Comparing ``str`` is not an option, because
+    ``hmac.compare_digest`` raises ``TypeError`` on non-ASCII input, which would
+    turn a junk header into a 500 instead of a 401.
+    """
+    try:
+        return value.encode("latin-1")
+    except UnicodeEncodeError:
+        return value.encode("utf-8")
 
 
 def token_from_headers(headers: Mapping[str, str]) -> str:
@@ -103,12 +113,11 @@ class AuthConfig:
                 "PANEL_PASSWORD is not set, refusing to serve an unprotected panel; add "
                 "`- PANEL_PASSWORD=...` to the wgpanel service in docker-compose.yml"
             )
+        # Deliberately no length or charset policy: this is the operator's own
+        # credential, refusing to boot over it buys nothing, and the password
+        # right next to it is only checked for emptiness. Unset or empty simply
+        # means the token feature is off and the panel serves as it always did.
         token = (environ.get("PANEL_API_TOKEN") or "").strip()
-        if token and len(token) < MIN_TOKEN_LENGTH:
-            raise WgPanelError(
-                f"PANEL_API_TOKEN is {len(token)} characters, which is too short to expose "
-                f"read access; use at least {MIN_TOKEN_LENGTH} random characters, or unset it"
-            )
         return cls(user=name, password=secret, api_token=token)
 
     def verify(self, user: str, password: str) -> bool:
@@ -234,7 +243,7 @@ class AuthGuard:
             return False
         if not self.config.api_token or not presented:
             return False
-        return hmac.compare_digest(presented, self.config.api_token)
+        return hmac.compare_digest(_wire_bytes(presented), self.config.api_token.encode("utf-8"))
 
     def attempt(self, user: str, password: str, client: str) -> str | None:
         """Return a fresh session token, or ``None`` when the login is refused."""
